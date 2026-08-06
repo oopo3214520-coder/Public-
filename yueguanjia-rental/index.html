@@ -91,7 +91,9 @@
   .stat-card {
     background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
     box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden;
+    cursor: pointer; transition: all 0.15s;
   }
+  .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
   .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .stat-card.blue::before { background: var(--primary); }
   .stat-card.green::before { background: var(--success); }
@@ -353,6 +355,7 @@
     <div class="nav-item" onclick="showPage('rent')"><span class="nav-icon">💰</span><span>收租紀錄</span></div>
     <div class="nav-item" onclick="showPage('repair')"><span class="nav-icon">🔧</span><span>維修日誌</span></div>
     <div class="nav-item" onclick="showPage('todo')"><span class="nav-icon">✅</span><span>待辦任務</span></div>
+    <div class="nav-item" onclick="showPage('report')"><span class="nav-icon">📊</span><span>月報表</span></div>
   </nav>
   <div class="sidebar-footer">民國115年<br><span id="sync-status" style="font-size:11px">● 連線中…</span></div>
 </aside>
@@ -362,7 +365,7 @@
   <!-- HOME -->
   <div class="page active" id="page-home">
     <div class="page-header">
-      <div><div class="page-title">主頁總覽</div><div class="page-subtitle">民國115年8月 · 台南市東區</div></div>
+      <div><div class="page-title">主頁總覽</div></div>
       <button class="btn btn-primary" onclick="openPropertyModal()">＋ 新增物件</button>
     </div>
 
@@ -416,6 +419,16 @@
       <div><div class="page-title">待辦任務</div><div class="page-subtitle">依物件分別顯示</div></div>
     </div>
     <div id="todo-groups"></div>
+  </div>
+
+  <!-- MONTHLY REPORT -->
+  <div class="page" id="page-report">
+    <div class="page-header">
+      <div><div class="page-title">月報表</div><div class="page-subtitle">依月份管理員工獎金與扣繳明細</div></div>
+      <button class="btn btn-primary" onclick="openReportMonthModal()">＋ 新增月份</button>
+    </div>
+    <div class="tabs" id="report-month-tabs" style="width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;"></div>
+    <div id="report-content" style="margin-top:20px;"></div>
   </div>
 
   <!-- DETAIL -->
@@ -504,8 +517,8 @@
     <div class="modal-footer">
       <div id="modal-footer-left"></div>
       <div class="modal-footer-right">
-        <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-        <button class="btn btn-primary" onclick="saveModal()">儲存</button>
+        <button class="btn btn-secondary" id="modal-cancel-btn" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" id="modal-save-btn" onclick="saveModal()">儲存</button>
       </div>
     </div>
   </div>
@@ -568,6 +581,11 @@ let nextPropId = 4;
 let currentPropId = null;
 let prevPage = 'home';
 let modalCtx = { type: null, propId: null, editIndex: null };
+let monthlyReports = [];
+let nextReportId = 1;
+let nextStaffId = 1;
+let nextItemId = 1;
+let currentReportId = null;
 
 // ═══════════════════════════════ HELPERS ═══════════════════════════════
 function statusLabel(s){ return { renew:'續約', new:'新簽約', expire:'即將到期', vacant:'待租' }[s] || s; }
@@ -604,11 +622,11 @@ function renderStats(){
     if(!p.bank) missingCount++;
   });
   document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card blue"><div class="stat-label">管理物件總數</div><div class="stat-value">${totalProps}</div><div class="stat-sub">全部出租中</div><span class="stat-icon">🏢</span></div>
-    <div class="stat-card green"><div class="stat-label">本月總租金收入</div><div class="stat-value small">$${totalRent.toLocaleString()}</div><div class="stat-sub">${totalProps} 間合計</div><span class="stat-icon">💰</span></div>
-    <div class="stat-card sky"><div class="stat-label">預估年度總收入</div><div class="stat-value small">$${totalYear.toLocaleString()}</div><div class="stat-sub">含半個月服務費</div><span class="stat-icon">📊</span></div>
-    <div class="stat-card amber"><div class="stat-label">待收 / 待填項目</div><div class="stat-value">${missingCount} 項</div><div class="stat-sub">需補齊資料</div><span class="stat-icon">⚠️</span></div>
-    <div class="stat-card red"><div class="stat-label">待租閒置物件</div><div class="stat-value">${properties.filter(p=>p.status==='vacant').length} 間</div><div class="stat-sub">${(()=>{const vp=properties.filter(p=>p.status==='vacant'&&idleDays(p)!=null);if(!vp.length)return'目前無資料';const max=Math.max(...vp.map(idleDays));return '最長閒置 '+max+' 天';})()}</div><span class="stat-icon">🔑</span></div>`;
+    <div class="stat-card blue" onclick="openStatModal('properties')"><div class="stat-label">管理物件總數</div><div class="stat-value">${totalProps}</div><div class="stat-sub">全部出租中</div><span class="stat-icon">🏢</span></div>
+    <div class="stat-card green" onclick="openStatModal('rent')"><div class="stat-label">本月總租金收入</div><div class="stat-value small">$${totalRent.toLocaleString()}</div><div class="stat-sub">${totalProps} 間合計</div><span class="stat-icon">💰</span></div>
+    <div class="stat-card sky" onclick="openStatModal('year')"><div class="stat-label">預估年度總收入</div><div class="stat-value small">$${totalYear.toLocaleString()}</div><div class="stat-sub">含半個月服務費</div><span class="stat-icon">📊</span></div>
+    <div class="stat-card amber" onclick="openStatModal('missing')"><div class="stat-label">待收 / 待填項目</div><div class="stat-value">${missingCount} 項</div><div class="stat-sub">需補齊資料</div><span class="stat-icon">⚠️</span></div>
+    <div class="stat-card red" onclick="openStatModal('vacant')"><div class="stat-label">待租閒置物件</div><div class="stat-value">${properties.filter(p=>p.status==='vacant').length} 間</div><div class="stat-sub">${(()=>{const vp=properties.filter(p=>p.status==='vacant'&&idleDays(p)!=null);if(!vp.length)return'目前無資料';const max=Math.max(...vp.map(idleDays));return '最長閒置 '+max+' 天';})()}</div><span class="stat-icon">🔑</span></div>`;
 }
 
 // ═══════════════════════════════ RENDER: PROPERTY CARDS ═══════════════════════════════
@@ -747,7 +765,7 @@ function renderRepairPage(){
               <td>${esc(r.done)||'—'}</td>
               <td>${fmtMoney(r.cost)||'待估價'}</td>
               <td>${fmtStatus(r.status)}</td>
-              <td><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
+              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✏️</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
             </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`}
         </tbody>
       </table>
@@ -774,16 +792,130 @@ function renderTodoPage(){
     </div>`).join('');
 }
 
+// ═══════════════════════════════ MONTHLY REPORT: CALCULATIONS ═══════════════════════════════
+function round2(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+function getReport(id){ return monthlyReports.find(r => r.id === id); }
+function getStaff(report, staffId){ return report.staff.find(s => s.id === staffId); }
+function staffTotal(staff){ return round2(staff.items.reduce((a,i)=>a+(Number(i.amount)||0),0)); }
+function staffInsurance(total){ return total >= 20000 ? round2(total * 0.0211) : 0; }
+function staffTax(total){ return total >= 20000 ? round2(total * 0.10) : 0; }
+function staffNet(total){ return round2(total - staffInsurance(total) - staffTax(total)); }
+function fmtNum(n){ return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString(undefined,{maximumFractionDigits:2}); }
+
+// ═══════════════════════════════ MONTHLY REPORT: RENDER ═══════════════════════════════
+function renderReportPage(){
+  const tabsWrap = document.getElementById('report-month-tabs');
+  const content = document.getElementById('report-content');
+
+  if(!monthlyReports.length){
+    tabsWrap.innerHTML = '';
+    content.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">尚無月報表，點右上角「＋ 新增月份」開始建立</div></div>`;
+    return;
+  }
+  if(currentReportId == null || !getReport(currentReportId)){
+    currentReportId = monthlyReports[monthlyReports.length-1].id;
+  }
+
+  tabsWrap.innerHTML = monthlyReports.map(r=>`
+    <button class="tab ${r.id===currentReportId?'active':''}" onclick="switchReportMonth(${r.id})">${esc(r.month)}</button>
+  `).join('');
+
+  const report = getReport(currentReportId);
+  const allTotals = report.staff.map(s=>{
+    const total = staffTotal(s);
+    return { insurance: staffInsurance(total), tax: staffTax(total), net: staffNet(total) };
+  });
+  const sumInsurance = round2(allTotals.reduce((a,t)=>a+t.insurance,0));
+  const sumTax = round2(allTotals.reduce((a,t)=>a+t.tax,0));
+  const sumNet = round2(allTotals.reduce((a,t)=>a+t.net,0));
+
+  content.innerHTML = `
+    <div class="report-summary" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+      <div class="report-card"><div class="report-val" style="color:var(--accent)">${fmtNum(sumInsurance)}</div><div class="report-label">二代健保加總</div></div>
+      <div class="report-card"><div class="report-val" style="color:var(--warning)">${fmtNum(sumTax)}</div><div class="report-label">預扣稅加總</div></div>
+      <div class="report-card"><div class="report-val" style="color:var(--success)">${fmtNum(sumNet)}</div><div class="report-label">總獎金支出（實領總和）</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-secondary btn-sm" onclick="openStaffNameModal(${report.id})">＋ 新增員工</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteReportMonth(${report.id})">🗑️ 刪除本月報表</button>
+    </div>
+    ${report.staff.length ? report.staff.map(s=>{
+      const total = staffTotal(s);
+      const insurance = staffInsurance(total);
+      const tax = staffTax(total);
+      const net = staffNet(total);
+      return `
+      <div class="table-wrap">
+        <div class="prop-group-header">
+          <span class="prop-group-name">👤 ${esc(s.name)}</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-xs" onclick="openStaffNameModal(${report.id},${s.id})">✏️ 改名</button>
+            <button class="btn btn-primary btn-xs" onclick="openReportItemModal(${report.id},${s.id})">＋ 新增項目</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteStaff(${report.id},${s.id})">🗑️ 刪除員工</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>物件／案件</th><th>備註</th><th>金額</th><th></th></tr></thead>
+          <tbody>
+            ${s.items.length ? s.items.map(it=>{
+              const prop = it.propId ? getProp(it.propId) : null;
+              return `<tr>
+                <td>${prop ? esc(prop.name) : (it.propName ? esc(it.propName) : '—')}</td>
+                <td style="color:var(--text3)">${esc(it.note)||'—'}</td>
+                <td style="font-weight:700">${fmtNum(Number(it.amount)||0)}</td>
+                <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openReportItemModal(${report.id},${s.id},${it.id})" title="編輯">✏️</button><button class="del-btn" onclick="deleteReportItem(${report.id},${s.id},${it.id})" title="刪除">🗑️</button></td>
+              </tr>`;
+            }).join('') : `<tr><td colspan="4"><div class="empty"><div class="empty-text">尚無項目，點「＋ 新增項目」開始輸入</div></div></td></tr>`}
+          </tbody>
+        </table>
+        <div style="padding:14px 20px;background:var(--surface2);border-top:1px solid var(--border);">
+          <div class="info-row"><span class="info-key">獎金總結</span><span class="info-val" style="font-size:15px">${fmtNum(total)}</span></div>
+          <div class="info-row"><span class="info-key">二代健保 2.11%${total<20000?'（未達20000免收）':''}</span><span class="info-val" style="color:var(--accent)">${fmtNum(insurance)}</span></div>
+          <div class="info-row"><span class="info-key">10% 所得稅預扣${total<20000?'（未達20000免收）':''}</span><span class="info-val" style="color:var(--warning)">${fmtNum(tax)}</span></div>
+          <div class="info-row" style="border-top:1px solid var(--border);padding-top:9px;margin-top:2px;"><span class="info-key" style="font-weight:700;color:var(--text)">實領獎金</span><span class="info-val big" style="color:var(--success)">${fmtNum(net)}</span></div>
+        </div>
+      </div>`;
+    }).join('') : `<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">本月尚無員工，點「＋ 新增員工」開始建立</div></div>`}
+  `;
+}
+
+function switchReportMonth(id){
+  currentReportId = id;
+  renderReportPage();
+}
+
+// ═══════════════════════════════ MONTHLY REPORT: DELETE ACTIONS ═══════════════════════════════
+function deleteReportMonth(id){
+  if(!confirm('確定要刪除這個月份的報表嗎？此操作無法復原。')) return;
+  monthlyReports = monthlyReports.filter(r=>r.id!==id);
+  if(currentReportId === id) currentReportId = null;
+  refreshAll();
+}
+function deleteStaff(reportId, staffId){
+  if(!confirm('確定要刪除這位員工的本月資料嗎？')) return;
+  const report = getReport(reportId);
+  report.staff = report.staff.filter(s=>s.id!==staffId);
+  refreshAll();
+}
+function deleteReportItem(reportId, staffId, itemId){
+  if(!confirm('確定要刪除這筆項目嗎？')) return;
+  const staff = getStaff(getReport(reportId), staffId);
+  staff.items = staff.items.filter(i=>i.id!==itemId);
+  refreshAll();
+}
+
+
 // ═══════════════════════════════ NAVIGATION ═══════════════════════════════
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const navMap = { home:0, properties:1, rent:2, repair:3, todo:4 };
+  const navMap = { home:0, properties:1, rent:2, repair:3, todo:4, report:5 };
   if(navMap[name]!==undefined) document.querySelectorAll('.nav-item')[navMap[name]].classList.add('active');
   if(name==='rent') renderRentPage();
   if(name==='repair') renderRepairPage();
   if(name==='todo') renderTodoPage();
+  if(name==='report') renderReportPage();
 }
 
 function openDetail(id){
@@ -841,7 +973,7 @@ function renderDetail(){
     <tr>
       <td>${esc(r.item)}</td><td>${esc(r.reported)||'—'}</td><td>${esc(r.done)||'—'}</td>
       <td>${fmtMoney(r.cost)||'待估價'}</td><td>${fmtStatus(r.status)}</td>
-      <td><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})">🗑️</button></td>
+      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✏️</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})">🗑️</button></td>
     </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`;
 
   const totalRent = p.rentRecords.reduce((a,r)=>a+r.rent,0);
@@ -925,6 +1057,7 @@ function refreshAll(){
   if(activePage==='repair') renderRepairPage();
   if(activePage==='todo') renderTodoPage();
   if(activePage==='detail' && currentPropId) renderDetail();
+  if(activePage==='report') renderReportPage();
   persistData();
 }
 
@@ -944,7 +1077,7 @@ function persistData(){
       const resp = await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties, nextPropId })
+        body: JSON.stringify({ properties, nextPropId, monthlyReports, nextReportId, nextStaffId, nextItemId })
       });
       if(!resp.ok){
         const err = await resp.json().catch(()=>({}));
@@ -970,6 +1103,10 @@ async function loadData(){
     if(data && Array.isArray(data.properties) && data.properties.length){
       properties = data.properties;
       nextPropId = data.nextPropId || (Math.max(...properties.map(p=>p.id)) + 1);
+      monthlyReports = Array.isArray(data.monthlyReports) ? data.monthlyReports : [];
+      nextReportId = data.nextReportId || (monthlyReports.length ? Math.max(...monthlyReports.map(r=>r.id))+1 : 1);
+      nextStaffId = data.nextStaffId || 1;
+      nextItemId = data.nextItemId || 1;
       setSyncStatus('● 已同步雲端');
     } else {
       // Redis 裡還沒有資料 → 用預設範例資料當作第一次的初始值，並寫回雲端
@@ -987,10 +1124,68 @@ async function loadData(){
   if(activePage==='repair') renderRepairPage();
   if(activePage==='todo') renderTodoPage();
   if(activePage==='detail' && currentPropId) renderDetail();
+  if(activePage==='report') renderReportPage();
 }
 
 // ═══════════════════════════════ MODAL: PROPERTY ═══════════════════════════════
+// ═══════════════════════════════ MODAL: STAT CARD DETAIL (view-only) ═══════════════════════════════
+function openStatModal(type){
+  document.getElementById('modal-save-btn').style.display = 'none';
+  document.getElementById('modal-cancel-btn').textContent = '關閉';
+  document.getElementById('modal-footer-left').innerHTML = '';
+  let title = '', bodyHtml = '';
+
+  const rowHtml = (p, rightHtml) => `
+    <div class="idle-item" style="cursor:pointer" onclick="closeModal();openDetail(${p.id})">
+      <div>
+        <div style="font-weight:700;font-size:14px">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${esc(p.address)} ${p.tenant?'· 承租人：'+esc(p.tenant):''}</div>
+      </div>
+      ${rightHtml}
+    </div>`;
+
+  if(type === 'properties'){
+    title = '🏢 管理物件總數 — 全部物件';
+    bodyHtml = properties.length ? properties.map(p => rowHtml(p, `<span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>`)).join('') :
+      `<div class="empty"><div class="empty-text">尚無物件資料</div></div>`;
+  }
+  else if(type === 'rent'){
+    title = '💰 本月總租金收入 — 各物件明細';
+    bodyHtml = properties.length ? properties.map(p => rowHtml(p, `<span style="font-weight:700;color:var(--primary)">$${p.rent.toLocaleString()}</span>`)).join('') :
+      `<div class="empty"><div class="empty-text">尚無物件資料</div></div>`;
+  }
+  else if(type === 'year'){
+    title = '📊 預估年度總收入 — 各物件明細';
+    bodyHtml = properties.length ? properties.map(p => rowHtml(p, `<span style="font-weight:700;color:var(--accent)">$${yearTotal(p).toLocaleString()}</span>`)).join('') :
+      `<div class="empty"><div class="empty-text">尚無物件資料</div></div>`;
+  }
+  else if(type === 'missing'){
+    title = '⚠️ 待收 / 待填項目';
+    let items = [];
+    properties.forEach(p=>{
+      if(!p.serviceFee) items.push(rowHtml(p, `<span style="color:var(--warning);font-size:12px;font-weight:600">半個月服務費未填</span>`));
+      if(!p.bank || !p.account) items.push(rowHtml(p, `<span style="color:var(--warning);font-size:12px;font-weight:600">銀行帳號未填</span>`));
+    });
+    bodyHtml = items.length ? items.join('') : `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">目前沒有待補齊的項目</div></div>`;
+  }
+  else if(type === 'vacant'){
+    title = '🔑 待租閒置物件';
+    const vp = properties.filter(p => p.status === 'vacant');
+    bodyHtml = vp.length ? vp.map(p=>{
+      const days = idleDays(p);
+      const label = days==null ? '未設定日期' : `閒置 ${days} 天`;
+      return rowHtml(p, `<span style="font-weight:700;color:var(--danger)">${label}</span>`);
+    }).join('') : `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">目前沒有待租物件，全部已出租</div></div>`;
+  }
+
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
 function openPropertyModal(id){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
   modalCtx = { type: id ? 'editProperty' : 'addProperty', propId: id || null, editIndex: null };
   const p = id ? getProp(id) : null;
   document.getElementById('modal-title').textContent = id ? '編輯物件' : '新增物件';
@@ -1060,6 +1255,8 @@ function deletePropertyFromModal(id){
 
 // ═══════════════════════════════ MODAL: RENT ═══════════════════════════════
 function openRentModal(propId, editIndex){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
   modalCtx = { type:'rent', propId, editIndex: editIndex!=null?editIndex:null };
   const p = getProp(propId);
   const r = editIndex!=null ? p.rentRecords[editIndex] : null;
@@ -1085,6 +1282,8 @@ function openRentModal(propId, editIndex){
 
 // ═══════════════════════════════ MODAL: REPAIR ═══════════════════════════════
 function openRepairModal(propId, editIndex){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
   modalCtx = { type:'repair', propId, editIndex: editIndex!=null?editIndex:null };
   const p = getProp(propId);
   const r = editIndex!=null ? p.repairRecords[editIndex] : null;
@@ -1111,6 +1310,8 @@ function openRepairModal(propId, editIndex){
 
 // ═══════════════════════════════ MODAL: TODO ═══════════════════════════════
 function openTodoModal(propId){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
   modalCtx = { type:'todo', propId, editIndex: null };
   const p = getProp(propId);
   document.getElementById('modal-title').textContent = `新增待辦任務 — ${p.name}`;
@@ -1125,6 +1326,56 @@ function openTodoModal(propId){
   document.getElementById('modal-footer-left').innerHTML = '';
   document.getElementById('modal-overlay').classList.add('open');
 }
+
+// ═══════════════════════════════ MODAL: MONTHLY REPORT ═══════════════════════════════
+function openReportMonthModal(){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
+  modalCtx = { type: 'reportMonth' };
+  document.getElementById('modal-title').textContent = '新增月份';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label class="form-label">月份</label><input class="form-input" id="rm-month" placeholder="115/08"></div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openStaffNameModal(reportId, staffId){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
+  modalCtx = { type: 'staffName', reportId, staffId: staffId || null };
+  const report = getReport(reportId);
+  const staff = staffId ? getStaff(report, staffId) : null;
+  document.getElementById('modal-title').textContent = staffId ? '編輯員工姓名' : '新增員工';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="sn-name" placeholder="員工姓名" value="${esc(staff?staff.name:'')}"></div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openReportItemModal(reportId, staffId, itemId){
+  document.getElementById('modal-save-btn').style.display = '';
+  document.getElementById('modal-cancel-btn').textContent = '取消';
+  modalCtx = { type: 'reportItem', reportId, staffId, itemId: itemId || null };
+  const report = getReport(reportId);
+  const staff = getStaff(report, staffId);
+  const it = itemId ? staff.items.find(i=>i.id===itemId) : null;
+  document.getElementById('modal-title').textContent = (itemId?'編輯':'新增') + `項目 — ${staff.name}`;
+  const propOptions = properties.map(p=>`<option value="${p.id}" ${it&&it.propId===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label class="form-label">物件</label>
+      <select class="form-input" id="ri-prop">
+        <option value="">（不指定物件 / 其他）</option>
+        ${propOptions}
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">物件名稱（若上方未選擇，可自行輸入）</label><input class="form-input" id="ri-propname" placeholder="例：中正南路102室" value="${esc(it&&!it.propId?it.propName:'')}"></div>
+    <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="ri-note" placeholder="例：新簽、續約、協助簽約、代管、勞健保自付額..." value="${esc(it?it.note:'')}"></div>
+    <div class="form-group"><label class="form-label">金額</label><input class="form-input" type="number" id="ri-amount" placeholder="0（扣除項可輸入負數，例如 -1997）" value="${it?it.amount:''}"></div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>{ if(it && it.propId) document.getElementById('ri-prop').value = it.propId; }, 0);
+}
+
 
 // ═══════════════════════════════ MODAL: CLOSE / SAVE ═══════════════════════════════
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
@@ -1173,6 +1424,40 @@ function saveModal(){
     const text = v('tf-text');
     if(!text){ alert('請輸入任務內容'); return; }
     p.todos.unshift({ text, priority: v('tf-priority'), done:false });
+  }
+  else if(modalCtx.type === 'reportMonth'){
+    const month = v('rm-month');
+    if(!month){ alert('請輸入月份'); return; }
+    const newReport = { id: nextReportId++, month, staff: [] };
+    monthlyReports.push(newReport);
+    currentReportId = newReport.id;
+  }
+  else if(modalCtx.type === 'staffName'){
+    const name = v('sn-name');
+    if(!name){ alert('請輸入姓名'); return; }
+    const report = getReport(modalCtx.reportId);
+    if(modalCtx.staffId){
+      const staff = getStaff(report, modalCtx.staffId);
+      staff.name = name;
+    } else {
+      report.staff.push({ id: nextStaffId++, name, items: [] });
+    }
+  }
+  else if(modalCtx.type === 'reportItem'){
+    const report = getReport(modalCtx.reportId);
+    const staff = getStaff(report, modalCtx.staffId);
+    const propId = v('ri-prop') ? Number(v('ri-prop')) : null;
+    const propName = v('ri-propname');
+    const amount = v('ri-amount');
+    if(!propId && !propName){ alert('請選擇物件或輸入物件名稱'); return; }
+    if(amount === ''){ alert('請輸入金額'); return; }
+    const data = { propId, propName: propId ? null : propName, note: v('ri-note'), amount: Number(amount) };
+    if(modalCtx.itemId){
+      const idx = staff.items.findIndex(i=>i.id===modalCtx.itemId);
+      staff.items[idx] = { ...data, id: modalCtx.itemId };
+    } else {
+      staff.items.push({ ...data, id: nextItemId++ });
+    }
   }
 
   closeModal();
