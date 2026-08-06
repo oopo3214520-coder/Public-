@@ -517,7 +517,7 @@ let properties = [
   {
     id: 1, name: '崇善15街 501室', address: '台南市東區崇善15街45號501室',
     tenant: '陳子予', status: 'renew',
-    signDate: '115/06/09', periodStart: '115/06/10', periodEnd: '116/06/09',
+    signDate: '115/06/09', periodStart: '115/06/10', periodEnd: '116/06/09', depositDate: '115/06/01',
     rent: 10000, deposit: 20000, serviceFee: 5000,
     bank: '永豐銀行(807)', account: '017-018-0016068-8', accountHolder: '悅管家管理顧問股份有限公司', note: '',
     rentRecords: [
@@ -533,7 +533,7 @@ let properties = [
   {
     id: 2, name: '崇善15街 402室', address: '台南市東區崇善15街45號402室',
     tenant: '曾韋綺', status: 'new',
-    signDate: '115/06/15', periodStart: '115/06/16', periodEnd: '116/06/15',
+    signDate: '115/06/15', periodStart: '115/06/16', periodEnd: '116/06/15', depositDate: '115/06/10',
     rent: 12500, deposit: 25000, serviceFee: null,
     bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
     rentRecords: [
@@ -550,7 +550,7 @@ let properties = [
   {
     id: 3, name: '小東路 202室', address: '台南市東區小東路202室',
     tenant: '楊筱琦', status: 'renew',
-    signDate: '115/06/05', periodStart: '115/07/21', periodEnd: '116/07/20',
+    signDate: '115/06/05', periodStart: '115/07/21', periodEnd: '116/07/20', depositDate: '115/06/28',
     rent: 5950, deposit: 11900, serviceFee: null,
     bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
     rentRecords: [
@@ -622,6 +622,7 @@ function propCardHTML(p){
       <div class="prop-card-body" onclick="openDetail(${p.id})">
         <div class="prop-row"><span class="prop-key">👤 承租人</span><span class="prop-val">${esc(p.tenant)||'—'}</span></div>
         <div class="prop-row"><span class="prop-key">📅 租期</span><span class="prop-val">${p.periodStart}-${p.periodEnd}</span></div>
+        <div class="prop-row"><span class="prop-key">🗓️ 收訂日期</span><span class="prop-val">${esc(p.depositDate)||'—'}</span></div>
         <div class="prop-row"><span class="prop-key">💰 月租金</span><span class="prop-val money">$${p.rent.toLocaleString()}</span></div>
         <div class="prop-row"><span class="prop-key">🧾 半個月服務費</span><span class="prop-val">${fmtMoney(p.serviceFee) || '<span style="color:var(--warning)">待填</span>'}</span></div>
         <div class="prop-row"><span class="prop-key">🏦 銀行</span><span class="prop-val">${esc(p.bank)||'<span style="color:var(--warning)">待填</span>'}</span></div>
@@ -810,6 +811,7 @@ function renderDetail(){
       <div class="info-row"><span class="info-key">👤 承租人</span><span class="info-val">${esc(p.tenant)||'—'}</span></div>
       <div class="info-row"><span class="info-key">📅 簽約日期</span><span class="info-val">${p.signDate}</span></div>
       <div class="info-row"><span class="info-key">⏱️ 租期</span><span class="info-val">${p.periodStart}-${p.periodEnd}</span></div>
+      <div class="info-row"><span class="info-key">🗓️ 收訂日期</span><span class="info-val">${esc(p.depositDate)||'（未填）'}</span></div>
     </div>
     <div class="info-box"><h3>租金資訊</h3>
       <div class="info-row"><span class="info-key">💰 月租金</span><span class="info-val big">$${p.rent.toLocaleString()}</span></div>
@@ -1013,13 +1015,15 @@ function openPropertyModal(id){
       <div class="form-group"><label class="form-label">租期開始</label><input class="form-input" id="pf-start" placeholder="115/06/10" value="${esc(p?p.periodStart:'')}"></div>
       <div class="form-group"><label class="form-label">租期結束</label><input class="form-input" id="pf-end" placeholder="116/06/09" value="${esc(p?p.periodEnd:'')}"></div>
     </div>
+    <div class="form-group"><label class="form-label">收訂日期</label><input class="form-input" id="pf-depositdate" placeholder="115/06/01" value="${esc(p?p.depositDate:'')}"></div>
     <div class="form-group" id="pf-vacant-row" style="display:${p&&p.status==='vacant'?'block':'none'}">
       <label class="form-label">閒置起始日期</label>
       <input class="form-input" type="date" id="pf-vacantsince" value="${p&&p.vacantSince?p.vacantSince:''}">
     </div>
     <div class="form-section">租金設定</div>
+    <div style="font-size:11px;color:var(--text3);margin:-6px 0 12px;">💡 輸入月租金後，押金與半個月服務費會自動帶入建議值（押金＝租金×2，服務費＝租金÷2），仍可手動修改覆蓋。</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">月租金</label><input class="form-input" type="number" id="pf-rent" placeholder="0" value="${p?p.rent:''}"></div>
+      <div class="form-group"><label class="form-label">月租金</label><input class="form-input" type="number" id="pf-rent" placeholder="0" value="${p?p.rent:''}" oninput="autoFillRentDerived()"></div>
       <div class="form-group"><label class="form-label">押金</label><input class="form-input" type="number" id="pf-deposit" placeholder="0" value="${p&&p.deposit?p.deposit:''}"></div>
     </div>
     <div class="form-row">
@@ -1038,6 +1042,16 @@ function openPropertyModal(id){
 function toggleVacantField(){
   const status = document.getElementById('pf-status').value;
   document.getElementById('pf-vacant-row').style.display = status === 'vacant' ? 'block' : 'none';
+}
+function autoFillRentDerived(){
+  const rentEl = document.getElementById('pf-rent');
+  const depositEl = document.getElementById('pf-deposit');
+  const feeEl = document.getElementById('pf-servicefee');
+  if(!rentEl || !depositEl || !feeEl) return;
+  const rent = Number(rentEl.value);
+  if(!rent){ return; }
+  depositEl.value = rent * 2;
+  feeEl.value = rent / 2;
 }
 function deletePropertyFromModal(id){
   closeModal();
@@ -1123,7 +1137,7 @@ function saveModal(){
     if(!name){ alert('請輸入物件名稱'); return; }
     const data = {
       name, address: v('pf-address'), tenant: v('pf-tenant'),
-      status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'),
+      status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'), depositDate: v('pf-depositdate'),
       rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
       bank: v('pf-bank'), account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
       vacantSince: v('pf-status')==='vacant' ? (v('pf-vacantsince')||null) : null
