@@ -1,0 +1,9 @@
+{
+  "name": "yueguanjia-rental-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "悅管家租賃管理系統 — 前端 + Vercel Serverless API + Upstash Redis",
+  "dependencies": {
+    "@upstash/redis": "^1.34.3"
+  }
+}

@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>悅管家租賃管理系統</title>
+<style>
+  :root {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface2: #F0F2F5;
+    --border: #E2E6EA;
+    --primary: #2563EB;
+    --primary-light: #EFF6FF;
+    --primary-dark: #1D4ED8;
+    --accent: #0EA5E9;
+    --success: #16A34A;
+    --success-light: #F0FDF4;
+    --warning: #D97706;
+    --warning-light: #FFFBEB;
+    --danger: #DC2626;
+    --danger-light: #FEF2F2;
+    --text: #111827;
+    --text2: #374151;
+    --text3: #6B7280;
+    --text4: #9CA3AF;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 220px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    z-index: 100; box-shadow: var(--shadow);
+  }
+  .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 700; color: var(--primary); line-height: 1.3; }
+  .sidebar-logo span { font-size: 11px; color: var(--text3); font-weight: 400; }
+  .sidebar-nav { padding: 12px 0; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--text2);
+    transition: all 0.15s; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: var(--primary-light); color: var(--primary); }
+  .nav-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text4); }
+
+  /* ── Main ── */
+  .main { margin-left: 220px; padding: 24px; min-height: 100vh; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--text); }
+  .page-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--surface2); color: var(--text2); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 9px; font-size: 11px; }
+  .btn-danger { background: var(--danger-light); color: var(--danger); }
+  .btn-danger:hover { background: #FECACA; }
+  .btn-success { background: var(--success-light); color: var(--success); }
+
+  /* ── Stat Cards ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
+    box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.blue::before { background: var(--primary); }
+  .stat-card.green::before { background: var(--success); }
+  .stat-card.amber::before { background: var(--warning); }
+  .stat-card.sky::before { background: var(--accent); }
+  .stat-card.red::before { background: var(--danger); }
+  .stat-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 8px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-value.small { font-size: 20px; }
+  .stat-sub { font-size: 11px; color: var(--text4); margin-top: 6px; }
+  .stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 28px; opacity: 0.12; }
+
+  .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title span { font-size: 12px; color: var(--text3); font-weight: 400; }
+  .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .prop-card {
+    background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+    box-shadow: var(--shadow); overflow: hidden; transition: all 0.2s;
+  }
+  .prop-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary); }
+  .prop-card-header {
+    padding: 16px 18px 12px; border-bottom: 1px solid var(--surface2);
+    display: flex; align-items: flex-start; justify-content: space-between; cursor: pointer;
+  }
+  .prop-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .prop-address { font-size: 12px; color: var(--text3); margin-top: 3px; }
+  .badge { font-size: 13px; font-weight: 700; padding: 4px 11px; border-radius: 20px; white-space: nowrap; }
+  .badge-renew { background: #DCFCE7; color: var(--success); }
+  .badge-new { background: #FEE2E2; color: var(--danger); }
+  .badge-expire { background: #FEE2E2; color: var(--danger); }
+  .badge-vacant { background: #F3E8FF; color: #7E22CE; }
+  .idle-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2); }
+  .idle-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .idle-days { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .idle-ok { background: var(--success-light); color: var(--success); }
+  .idle-warn { background: #FEF9C3; color: #854D0E; }
+  .idle-bad { background: var(--danger-light); color: var(--danger); }
+  .prop-card-body { padding: 14px 18px; cursor: pointer; }
+  .prop-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .prop-row:last-child { margin-bottom: 0; }
+  .prop-key { color: var(--text3); }
+  .prop-val { color: var(--text2); font-weight: 500; }
+  .prop-val.money { color: var(--primary); font-weight: 700; }
+  .prop-card-footer { padding: 10px 18px; background: var(--surface2); display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); }
+
+  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .alert-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 18px 20px; }
+  .alert-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2); }
+  .alert-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .alert-dot.red { background: var(--danger); }
+  .alert-dot.amber { background: var(--warning); }
+  .alert-dot.blue { background: var(--primary); }
+  .alert-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .alert-time { font-size: 11px; color: var(--text4); margin-top: 2px; }
+
+  .record-item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--surface2); }
+  .record-item:last-child { border-bottom: none; }
+  .record-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .record-icon.rent { background: var(--primary-light); }
+  .record-icon.repair { background: #FEF3C7; }
+  .record-icon.todo { background: var(--success-light); }
+  .record-body { flex: 1; }
+  .record-title { font-size: 13px; font-weight: 600; color: var(--text2); }
+  .record-desc { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .record-amount { font-size: 14px; font-weight: 700; color: var(--primary); }
+
+  .detail-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface2); color: var(--text2); border: none; transition: all 0.15s;
+  }
+  .back-btn:hover { background: var(--border); }
+  .detail-title { font-size: 20px; font-weight: 700; }
+  .detail-header-spacer { flex: 1; }
+
+  .tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 20px; width: fit-content; }
+  .tab { padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border: none; background: none; transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+  .tab:hover:not(.active) { color: var(--text2); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-box { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 20px; }
+  .info-box h3 { font-size: 13px; font-weight: 700; color: var(--text3); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .info-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--surface2); font-size: 13px; }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-key { color: var(--text3); }
+  .info-val { color: var(--text2); font-weight: 600; }
+  .info-val.big { font-size: 18px; color: var(--primary); }
+
+  .table-wrap { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px; }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-header-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 11px 16px; font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; font-size: 13px; color: var(--text2); border-bottom: 1px solid var(--surface2); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--primary-light); }
+  .status-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .status-paid { background: var(--success-light); color: var(--success); }
+  .status-pending { background: #FEF9C3; color: #854D0E; }
+  .status-done { background: var(--success-light); color: var(--success); }
+  .status-progress { background: #DBEAFE; color: var(--primary); }
+  .status-open { background: #FEE2E2; color: var(--danger); }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text4); font-size: 14px; padding: 4px 6px; border-radius: 6px; transition: all 0.15s; }
+  .del-btn:hover { background: var(--danger-light); color: var(--danger); }
+  .edit-icon-btn { background: none; border: none; cursor: pointer; color: var(--text4); font-size: 14px; padding: 4px 6px; border-radius: 6px; transition: all 0.15s; }
+  .edit-icon-btn:hover { background: var(--primary-light); color: var(--primary); }
+
+  .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--surface2); background: var(--surface); }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-size: 10px; }
+  .todo-check.done { background: var(--success); border-color: var(--success); color: #fff; }
+  .todo-text { flex: 1; font-size: 13px; color: var(--text2); }
+  .todo-text.done { text-decoration: line-through; color: var(--text4); }
+  .todo-priority { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+  .priority-high { background: #FEE2E2; color: var(--danger); }
+  .priority-mid { background: #FEF9C3; color: #854D0E; }
+  .priority-low { background: var(--success-light); color: var(--success); }
+
+  .report-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  .report-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 16px 18px; text-align: center; }
+  .report-val { font-size: 22px; font-weight: 700; color: var(--primary); }
+  .report-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+  .modal-footer-right { display: flex; gap: 10px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; color: var(--text); background: var(--bg); transition: border 0.15s; font-family: inherit; }
+  .form-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .form-section:first-child { margin-top: 0; }
+
+  .prop-group-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .prop-group-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .prop-group-tenant { font-size: 12px; color: var(--text3); font-weight: 400; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .sidebar-logo h1, .sidebar-logo span, .nav-item span, .sidebar-footer { display: none; }
+    .main { margin-left: 60px; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .bottom-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ══════════ MOBILE (≤640px): bottom nav, stacked layouts ══════════ */
+  @media (max-width: 640px) {
+    .sidebar {
+      width: 100%; height: 60px; top: auto; bottom: 0; left: 0; right: 0;
+      flex-direction: row; border-right: none; border-top: 1px solid var(--border);
+    }
+    .sidebar-logo, .sidebar-footer { display: none; }
+    .sidebar-nav { display: flex; flex-direction: row; padding: 0; width: 100%; }
+    .nav-item {
+      flex: 1; flex-direction: column; justify-content: center; align-items: center;
+      gap: 3px; padding: 6px 2px; border-left: none; border-top: 3px solid transparent;
+      font-size: 10px; white-space: nowrap;
+    }
+    .nav-item.active { border-left: none; border-top-color: var(--primary); }
+    .nav-item span:last-child { display: block !important; font-size: 10px; }
+    .nav-icon { font-size: 18px; width: auto; }
+
+    .main { margin-left: 0; padding: 14px 12px 76px; }
+
+    .page-header { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .page-title { font-size: 19px; }
+    .page-header .btn { font-size: 13px; padding: 8px 14px; }
+
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+    .stat-card { padding: 14px 14px; }
+    .stat-value { font-size: 20px; }
+    .stat-value.small { font-size: 16px; }
+    .stat-icon { font-size: 22px; }
+
+    .properties-grid { grid-template-columns: 1fr; gap: 12px; }
+
+    .bottom-grid { gap: 12px; margin-bottom: 18px; }
+    .alert-card { padding: 14px 16px; }
+
+    /* Tables: allow horizontal scroll instead of squishing */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 640px; }
+    .table-header { flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+
+    .prop-group-header { flex-wrap: wrap; gap: 8px; }
+
+    /* Detail page header */
+    .detail-header { flex-wrap: wrap; row-gap: 10px; }
+    .detail-header .back-btn { order: 1; }
+    .detail-title { font-size: 17px; }
+    #detail-addr { font-size: 12px !important; }
+    .detail-header-spacer { display: none; }
+    .detail-header { gap: 8px; }
+    .detail-header > button.btn-sm { font-size: 12px; padding: 6px 10px; }
+
+    /* Tabs: horizontal scroll instead of overflow/wrap */
+    .tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+    .tab { white-space: nowrap; padding: 8px 13px; font-size: 12px; flex-shrink: 0; }
+
+    .info-grid { gap: 12px; }
+    .info-box { padding: 16px; }
+
+    .report-summary { grid-template-columns: 1fr; gap: 10px; }
+
+    /* Modal: fit small screens */
+    .modal-overlay { align-items: flex-end; }
+    .modal { width: 100%; max-width: 100%; max-height: 90vh; border-radius: var(--radius) var(--radius) 0 0; }
+    .modal-header { padding: 16px 18px; }
+    .modal-body { padding: 18px; }
+    .modal-footer { padding: 12px 18px; flex-wrap: wrap; }
+    .form-row { grid-template-columns: 1fr; gap: 0; }
+    .form-input { font-size: 16px; } /* prevents iOS auto-zoom on focus */
+
+    .todo-item { padding: 12px; flex-wrap: wrap; }
+    .todo-text { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay" style="position:fixed;inset:0;background:#F7F8FA;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+  <div style="font-size:32px;">🏢</div>
+  <div style="font-size:14px;color:#6B7280;">載入中，正在連接雲端資料庫…</div>
+</div>
+
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>🏢 悅管家<br>租賃管理系統</h1>
+    <span>專業版 v2.1</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="showPage('home')"><span class="nav-icon">🏠</span><span>主頁總覽</span></div>
+    <div class="nav-item" onclick="showPage('properties')"><span class="nav-icon">🏘️</span><span>物件管理</span></div>
+    <div class="nav-item" onclick="showPage('rent')"><span class="nav-icon">💰</span><span>收租紀錄</span></div>
+    <div class="nav-item" onclick="showPage('repair')"><span class="nav-icon">🔧</span><span>維修日誌</span></div>
+    <div class="nav-item" onclick="showPage('todo')"><span class="nav-icon">✅</span><span>待辦任務</span></div>
+  </nav>
+  <div class="sidebar-footer">民國115年<br><span id="sync-status" style="font-size:11px">● 連線中…</span></div>
+</aside>
+
+<main class="main">
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="page-header">
+      <div><div class="page-title">主頁總覽</div><div class="page-subtitle">民國115年8月 · 台南市東區</div></div>
+      <button class="btn btn-primary" onclick="openPropertyModal()">＋ 新增物件</button>
+    </div>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="alert-card" style="margin-bottom:24px;" id="vacant-card">
+      <div class="section-title" style="margin-bottom:12px;">🔑 待租物件 <span>閒置天數追蹤</span></div>
+      <div id="vacant-list"></div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="alert-card">
+        <div class="section-title" style="margin-bottom:12px;">⚠️ 警告與提醒</div>
+        <div id="alert-list"></div>
+      </div>
+      <div class="alert-card">
+        <div class="section-title" style="margin-bottom:12px;">📋 最近紀錄</div>
+        <div id="recent-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPERTIES LIST -->
+  <div class="page" id="page-properties">
+    <div class="page-header">
+      <div><div class="page-title">物件管理</div><div class="page-subtitle">所有租賃物件一覽，可編輯或刪除</div></div>
+      <button class="btn btn-primary" onclick="openPropertyModal()">＋ 新增物件</button>
+    </div>
+    <div class="properties-grid" id="prop-grid-2"></div>
+  </div>
+
+  <!-- RENT (grouped by property) -->
+  <div class="page" id="page-rent">
+    <div class="page-header">
+      <div><div class="page-title">收租紀錄</div><div class="page-subtitle">依物件分別顯示</div></div>
+    </div>
+    <div id="rent-groups"></div>
+  </div>
+
+  <!-- REPAIR (grouped by property) -->
+  <div class="page" id="page-repair">
+    <div class="page-header">
+      <div><div class="page-title">維修日誌</div><div class="page-subtitle">依物件分別顯示</div></div>
+    </div>
+    <div id="repair-groups"></div>
+  </div>
+
+  <!-- TODO (grouped by property) -->
+  <div class="page" id="page-todo">
+    <div class="page-header">
+      <div><div class="page-title">待辦任務</div><div class="page-subtitle">依物件分別顯示</div></div>
+    </div>
+    <div id="todo-groups"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="page" id="page-detail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="goBack()">← 返回</button>
+      <div>
+        <div class="detail-title" id="detail-name">—</div>
+        <div style="font-size:13px;color:var(--text3)" id="detail-addr">—</div>
+      </div>
+      <span id="detail-badge" class="badge" style="margin-left:12px"></span>
+      <div class="detail-header-spacer"></div>
+      <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(currentPropId)">✏️ 編輯物件</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProperty(currentPropId)" style="margin-left:8px">🗑️ 刪除物件</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('basic')">📋 基本資訊</button>
+      <button class="tab" onclick="switchTab('rent-rec')">💰 收租紀錄</button>
+      <button class="tab" onclick="switchTab('repair-rec')">🔧 維修日誌</button>
+      <button class="tab" onclick="switchTab('report')">📊 檢視報告</button>
+      <button class="tab" onclick="switchTab('tasks')">✅ 待辦任務</button>
+    </div>
+
+    <div class="tab-content active" id="tab-basic">
+      <div class="info-grid" id="detail-basic-grid"></div>
+    </div>
+
+    <div class="tab-content" id="tab-rent-rec">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-header-title">💰 收租紀錄</span>
+          <button class="btn btn-primary btn-sm" onclick="openRentModal(currentPropId)">＋ 新增</button>
+        </div>
+        <table>
+          <thead><tr><th>期間</th><th>租金</th><th>半個月服務費</th><th>合計</th><th>狀態</th><th>備註</th><th></th></tr></thead>
+          <tbody id="detail-rent-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-repair-rec">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-header-title">🔧 維修紀錄</span>
+          <button class="btn btn-primary btn-sm" onclick="openRepairModal(currentPropId)">＋ 新增</button>
+        </div>
+        <table>
+          <thead><tr><th>項目</th><th>回報日期</th><th>處理日期</th><th>費用</th><th>狀態</th><th></th></tr></thead>
+          <tbody id="detail-repair-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-report">
+      <div class="report-summary" id="detail-report-summary"></div>
+      <div class="table-wrap">
+        <div class="table-header"><span class="table-header-title">📊 收支明細</span></div>
+        <table>
+          <thead><tr><th>月份</th><th>租金</th><th>半個月服務費</th><th>合計</th></tr></thead>
+          <tbody id="detail-report-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-tasks">
+      <div class="table-wrap" style="overflow:hidden">
+        <div class="table-header">
+          <span class="table-header-title">✅ 待辦任務</span>
+          <button class="btn btn-primary btn-sm" onclick="openTodoModal(currentPropId)">＋ 新增</button>
+        </div>
+        <div id="detail-todo-list"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">新增</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <div id="modal-footer-left"></div>
+      <div class="modal-footer-right">
+        <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveModal()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════ DATA ═══════════════════════════════
+let properties = [
+  {
+    id: 1, name: '崇善15街 501室', address: '台南市東區崇善15街45號501室',
+    tenant: '陳子予', status: 'renew',
+    signDate: '115/06/09', periodStart: '115/06/10', periodEnd: '116/06/09',
+    rent: 10000, deposit: 20000, serviceFee: 5000,
+    bank: '永豐銀行(807)', account: '017-018-0016068-8', accountHolder: '悅管家管理顧問股份有限公司', note: '',
+    rentRecords: [
+      { month: '115/07', rent: 10000, serviceFee: 5000, status: 'paid', note: '' },
+      { month: '115/06', rent: 10000, serviceFee: 5000, status: 'paid', note: '首月' },
+    ],
+    repairRecords: [
+      { item: '冷氣清洗保養', reported: '115/06/25', done: '115/07/01', cost: 1200, status: 'done' },
+      { item: '燈具更換', reported: '115/04/15', done: '115/04/16', cost: 350, status: 'done' },
+    ],
+    todos: []
+  },
+  {
+    id: 2, name: '崇善15街 402室', address: '台南市東區崇善15街45號402室',
+    tenant: '曾韋綺', status: 'new',
+    signDate: '115/06/15', periodStart: '115/06/16', periodEnd: '116/06/15',
+    rent: 12500, deposit: 25000, serviceFee: null,
+    bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
+    rentRecords: [
+      { month: '115/07', rent: 12500, serviceFee: null, status: 'pending', note: '待確認' },
+      { month: '115/06', rent: 12500, serviceFee: null, status: 'paid', note: '首月' },
+    ],
+    repairRecords: [ { item: '門鎖故障維修', reported: '115/07/18', done: '', cost: null, status: 'progress' } ],
+    todos: [
+      { text: '補齊半個月服務費資料', done: false, priority: '緊急' },
+      { text: '補齊銀行收款帳號', done: false, priority: '緊急' },
+      { text: '門鎖維修跟進', done: false, priority: '一般' },
+    ]
+  },
+  {
+    id: 3, name: '小東路 202室', address: '台南市東區小東路202室',
+    tenant: '楊筱琦', status: 'renew',
+    signDate: '115/06/05', periodStart: '115/07/21', periodEnd: '116/07/20',
+    rent: 5950, deposit: 11900, serviceFee: null,
+    bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
+    rentRecords: [
+      { month: '115/07', rent: 5950, serviceFee: null, status: 'paid', note: '' },
+      { month: '115/06', rent: 5950, serviceFee: null, status: 'paid', note: '首月' },
+    ],
+    repairRecords: [ { item: '廁所排水管疏通', reported: '115/05/10', done: '115/05/12', cost: 800, status: 'done' } ],
+    todos: [
+      { text: '確認年度合計資料設定', done: false, priority: '緊急' },
+      { text: '補齊半個月服務費資料', done: false, priority: '一般' },
+    ]
+  }
+];
+let nextPropId = 4;
+let currentPropId = null;
+let prevPage = 'home';
+let modalCtx = { type: null, propId: null, editIndex: null };
+
+// ═══════════════════════════════ HELPERS ═══════════════════════════════
+function statusLabel(s){ return { renew:'續約', new:'新簽約', expire:'即將到期', vacant:'待租' }[s] || s; }
+function statusClass(s){ return { renew:'badge-renew', new:'badge-new', expire:'badge-expire', vacant:'badge-vacant' }[s] || ''; }
+function idleDays(p){
+  if(!p.vacantSince) return null;
+  const start = new Date(p.vacantSince);
+  if(isNaN(start)) return null;
+  const diff = Math.floor((new Date() - start) / (1000*60*60*24));
+  return diff >= 0 ? diff : 0;
+}
+function fmtMoney(v){ return v != null && v !== '' ? '$'+Number(v).toLocaleString() : null; }
+function fmtStatus(s){
+  const map = { paid:['status-paid','已收款'], pending:['status-pending','待確認'], done:['status-done','已完成'], progress:['status-progress','處理中'], open:['status-open','待處理'] };
+  const d = map[s] || ['','—'];
+  return `<span class="status-badge ${d[0]}">${d[1]}</span>`;
+}
+function priorityClass(p){ return { '緊急':'priority-high', '一般':'priority-mid', '低':'priority-low' }[p] || 'priority-mid'; }
+function getProp(id){ return properties.find(p => p.id === id); }
+function yearTotal(p){
+  const sf = p.serviceFee || 0;
+  return p.rent * 12 + sf;
+}
+function esc(s){ return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ═══════════════════════════════ RENDER: STATS ═══════════════════════════════
+function renderStats(){
+  const totalProps = properties.length;
+  const totalRent = properties.reduce((a,p)=>a+p.rent,0);
+  const totalYear = properties.reduce((a,p)=>a+yearTotal(p),0);
+  let missingCount = 0;
+  properties.forEach(p=>{
+    if(!p.serviceFee) missingCount++;
+    if(!p.bank) missingCount++;
+  });
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card blue"><div class="stat-label">管理物件總數</div><div class="stat-value">${totalProps}</div><div class="stat-sub">全部出租中</div><span class="stat-icon">🏢</span></div>
+    <div class="stat-card green"><div class="stat-label">本月總租金收入</div><div class="stat-value small">$${totalRent.toLocaleString()}</div><div class="stat-sub">${totalProps} 間合計</div><span class="stat-icon">💰</span></div>
+    <div class="stat-card sky"><div class="stat-label">預估年度總收入</div><div class="stat-value small">$${totalYear.toLocaleString()}</div><div class="stat-sub">含半個月服務費</div><span class="stat-icon">📊</span></div>
+    <div class="stat-card amber"><div class="stat-label">待收 / 待填項目</div><div class="stat-value">${missingCount} 項</div><div class="stat-sub">需補齊資料</div><span class="stat-icon">⚠️</span></div>
+    <div class="stat-card red"><div class="stat-label">待租閒置物件</div><div class="stat-value">${properties.filter(p=>p.status==='vacant').length} 間</div><div class="stat-sub">${(()=>{const vp=properties.filter(p=>p.status==='vacant'&&idleDays(p)!=null);if(!vp.length)return'目前無資料';const max=Math.max(...vp.map(idleDays));return '最長閒置 '+max+' 天';})()}</div><span class="stat-icon">🔑</span></div>`;
+}
+
+// ═══════════════════════════════ RENDER: PROPERTY CARDS ═══════════════════════════════
+function propCardHTML(p){
+  return `
+    <div class="prop-card">
+      <div class="prop-card-header" onclick="openDetail(${p.id})">
+        <div><div class="prop-name">${esc(p.name)}</div><div class="prop-address">${esc(p.address)}</div></div>
+        <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
+      </div>
+      <div class="prop-card-body" onclick="openDetail(${p.id})">
+        <div class="prop-row"><span class="prop-key">👤 承租人</span><span class="prop-val">${esc(p.tenant)||'—'}</span></div>
+        <div class="prop-row"><span class="prop-key">📅 租期</span><span class="prop-val">${p.periodStart}-${p.periodEnd}</span></div>
+        <div class="prop-row"><span class="prop-key">💰 月租金</span><span class="prop-val money">$${p.rent.toLocaleString()}</span></div>
+        <div class="prop-row"><span class="prop-key">🧾 半個月服務費</span><span class="prop-val">${fmtMoney(p.serviceFee) || '<span style="color:var(--warning)">待填</span>'}</span></div>
+        <div class="prop-row"><span class="prop-key">🏦 銀行</span><span class="prop-val">${esc(p.bank)||'<span style="color:var(--warning)">待填</span>'}</span></div>
+      </div>
+      <div class="prop-card-footer">
+        <button class="btn btn-secondary btn-sm" onclick="openDetail(${p.id})">詳情</button>
+        <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(${p.id})">✏️ 編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProperty(${p.id})">🗑️ 刪除</button>
+      </div>
+    </div>`;
+}
+function renderAllCards(){
+  const html = properties.length ? properties.map(propCardHTML).join('') :
+    `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-text">還沒有房屋資訊<br>點擊「新增房屋」按鈕開始建立</div></div>`;
+  document.getElementById('prop-grid-2').innerHTML = html;
+}
+
+// ═══════════════════════════════ RENDER: ALERTS & RECENT ═══════════════════════════════
+function renderAlerts(){
+  let alerts = [];
+  properties.forEach(p=>{
+    if(!p.serviceFee) alerts.push({dot:'amber', text:`${p.name} — 半個月服務費尚未填寫`, time:`承租人：${p.tenant||'—'}`});
+    if(!p.bank || !p.account) alerts.push({dot:'blue', text:`${p.name} — 銀行帳號尚未填寫`, time:'請儘快補齊收款資訊'});
+  });
+  const list = document.getElementById('alert-list');
+  list.innerHTML = alerts.length ? alerts.map(a=>`
+    <div class="alert-item"><div class="alert-dot ${a.dot}"></div><div><div class="alert-text">${esc(a.text)}</div><div class="alert-time">${esc(a.time)}</div></div></div>
+  `).join('') : `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">目前沒有需要注意的警告</div></div>`;
+}
+function renderRecent(){
+  let items = [];
+  properties.forEach(p=>{
+    p.rentRecords.slice(0,1).forEach(r=>items.push({icon:'rent',emoji:'💰',title:`${p.name} — ${r.month}租金`,desc:`${p.tenant} · ${r.status==='paid'?'已收款':'待確認'}`,amount:'$'+r.rent.toLocaleString(),color:'var(--primary)'}));
+    p.repairRecords.slice(0,1).forEach(r=>items.push({icon:'repair',emoji:'🔧',title:`${p.name} — ${r.item}`,desc:`${r.reported} ${r.status==='done'?'完成':'處理中'}`,amount:r.status==='done'?'完成':'處理中',color:r.status==='done'?'var(--success)':'var(--warning)'}));
+  });
+  document.getElementById('recent-list').innerHTML = items.length ? items.slice(0,6).map(i=>`
+    <div class="record-item">
+      <div class="record-icon ${i.icon}">${i.emoji}</div>
+      <div class="record-body"><div class="record-title">${esc(i.title)}</div><div class="record-desc">${esc(i.desc)}</div></div>
+      <div class="record-amount" style="color:${i.color}">${i.amount}</div>
+    </div>`).join('') : `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">尚無紀錄</div></div>`;
+}
+
+// ═══════════════════════════════ RENDER: VACANT PROPERTIES ═══════════════════════════════
+function renderVacant(){
+  const vacantProps = properties.filter(p => p.status === 'vacant');
+  const card = document.getElementById('vacant-card');
+  const list = document.getElementById('vacant-list');
+  if(!vacantProps.length){
+    list.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-icon">🔑</div><div class="empty-text">目前沒有待租物件，全部已出租 🎉</div></div>`;
+    return;
+  }
+  list.innerHTML = vacantProps.map(p=>{
+    const days = idleDays(p);
+    let cls = 'idle-ok', label = days==null ? '未設定日期' : `閒置 ${days} 天`;
+    if(days!=null){
+      if(days >= 60) cls = 'idle-bad';
+      else if(days >= 30) cls = 'idle-warn';
+      else cls = 'idle-ok';
+    } else { cls = 'idle-warn'; }
+    return `
+      <div class="idle-item">
+        <div>
+          <div style="font-weight:700;font-size:14px">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${esc(p.address)} ${p.vacantSince ? '· 閒置起始 '+p.vacantSince : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="idle-days ${cls}">${label}</span>
+          <button class="btn btn-secondary btn-xs" onclick="openDetail(${p.id})">詳情</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════ RENDER: RENT PAGE (grouped) ═══════════════════════════════
+function renderRentPage(){
+  const wrap = document.getElementById('rent-groups');
+  if(!properties.length){ wrap.innerHTML = `<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">尚無物件資料</div></div>`; return; }
+  wrap.innerHTML = properties.map(p=>`
+    <div class="table-wrap">
+      <div class="prop-group-header">
+        <span class="prop-group-name">🏠 ${esc(p.name)} <span class="prop-group-tenant">承租人：${esc(p.tenant)||'—'}</span></span>
+        <button class="btn btn-primary btn-xs" onclick="openRentModal(${p.id})">＋ 新增收款</button>
+      </div>
+      <table>
+        <thead><tr><th>期間</th><th>租金</th><th>半個月服務費</th><th>合計</th><th>狀態</th><th>備註</th><th></th></tr></thead>
+        <tbody>
+          ${p.rentRecords.length ? p.rentRecords.map((r,idx)=>{
+            const total = r.rent + (r.serviceFee||0);
+            return `<tr>
+              <td>${esc(r.month)}</td>
+              <td>$${r.rent.toLocaleString()}</td>
+              <td>${fmtMoney(r.serviceFee)||'—'}</td>
+              <td style="font-weight:700">$${total.toLocaleString()}</td>
+              <td>${fmtStatus(r.status)}</td>
+              <td style="color:var(--text3)">${esc(r.note)||'—'}</td>
+              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✏️</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-text">尚無收租紀錄</div></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════ RENDER: REPAIR PAGE (grouped) ═══════════════════════════════
+function renderRepairPage(){
+  const wrap = document.getElementById('repair-groups');
+  if(!properties.length){ wrap.innerHTML = `<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">尚無物件資料</div></div>`; return; }
+  wrap.innerHTML = properties.map(p=>`
+    <div class="table-wrap">
+      <div class="prop-group-header">
+        <span class="prop-group-name">🏠 ${esc(p.name)} <span class="prop-group-tenant">承租人：${esc(p.tenant)||'—'}</span></span>
+        <button class="btn btn-primary btn-xs" onclick="openRepairModal(${p.id})">＋ 新增維修</button>
+      </div>
+      <table>
+        <thead><tr><th>項目</th><th>回報日期</th><th>處理日期</th><th>費用</th><th>狀態</th><th></th></tr></thead>
+        <tbody>
+          ${p.repairRecords.length ? p.repairRecords.map((r,idx)=>`
+            <tr>
+              <td>${esc(r.item)}</td>
+              <td>${esc(r.reported)||'—'}</td>
+              <td>${esc(r.done)||'—'}</td>
+              <td>${fmtMoney(r.cost)||'待估價'}</td>
+              <td>${fmtStatus(r.status)}</td>
+              <td><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
+            </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════ RENDER: TODO PAGE (grouped) ═══════════════════════════════
+function renderTodoPage(){
+  const wrap = document.getElementById('todo-groups');
+  if(!properties.length){ wrap.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">尚無物件資料</div></div>`; return; }
+  wrap.innerHTML = properties.map(p=>`
+    <div class="table-wrap" style="overflow:hidden">
+      <div class="prop-group-header">
+        <span class="prop-group-name">🏠 ${esc(p.name)} <span class="prop-group-tenant">承租人：${esc(p.tenant)||'—'}</span></span>
+        <button class="btn btn-primary btn-xs" onclick="openTodoModal(${p.id})">＋ 新增任務</button>
+      </div>
+      ${p.todos.length ? p.todos.map((t,idx)=>`
+        <div class="todo-item">
+          <div class="todo-check ${t.done?'done':''}" onclick="toggleTodoGlobal(${p.id},${idx})">${t.done?'✓':''}</div>
+          <div style="flex:1;padding:0 10px"><div class="todo-text ${t.done?'done':''}">${esc(t.text)}</div></div>
+          <span class="todo-priority ${priorityClass(t.priority)}">${esc(t.priority)}</span>
+          <button class="del-btn" onclick="deleteTodo(${p.id},${idx})" title="刪除">🗑️</button>
+        </div>`).join('') : `<div class="empty"><div class="empty-text">尚無待辦任務</div></div>`}
+    </div>`).join('');
+}
+
+// ═══════════════════════════════ NAVIGATION ═══════════════════════════════
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const navMap = { home:0, properties:1, rent:2, repair:3, todo:4 };
+  if(navMap[name]!==undefined) document.querySelectorAll('.nav-item')[navMap[name]].classList.add('active');
+  if(name==='rent') renderRentPage();
+  if(name==='repair') renderRepairPage();
+  if(name==='todo') renderTodoPage();
+}
+
+function openDetail(id){
+  const p = getProp(id);
+  if(!p) return;
+  currentPropId = id;
+  prevPage = document.querySelector('.page.active').id.replace('page-','');
+  renderDetail();
+  switchTab('basic');
+  showPage('detail');
+}
+function goBack(){ showPage(prevPage); }
+
+function renderDetail(){
+  const p = getProp(currentPropId);
+  if(!p) return;
+  document.getElementById('detail-name').textContent = p.name;
+  document.getElementById('detail-addr').textContent = p.address;
+  document.getElementById('detail-badge').className = 'badge ' + statusClass(p.status);
+  document.getElementById('detail-badge').textContent = statusLabel(p.status);
+
+  document.getElementById('detail-basic-grid').innerHTML = `
+    <div class="info-box"><h3>基本資訊</h3>
+      <div class="info-row"><span class="info-key">📍 地址</span><span class="info-val">${esc(p.address)}</span></div>
+      <div class="info-row"><span class="info-key">👤 承租人</span><span class="info-val">${esc(p.tenant)||'—'}</span></div>
+      <div class="info-row"><span class="info-key">📅 簽約日期</span><span class="info-val">${p.signDate}</span></div>
+      <div class="info-row"><span class="info-key">⏱️ 租期</span><span class="info-val">${p.periodStart}-${p.periodEnd}</span></div>
+    </div>
+    <div class="info-box"><h3>租金資訊</h3>
+      <div class="info-row"><span class="info-key">💰 月租金</span><span class="info-val big">$${p.rent.toLocaleString()}</span></div>
+      <div class="info-row"><span class="info-key">🔒 押金</span><span class="info-val">${fmtMoney(p.deposit)||'待填'}</span></div>
+      <div class="info-row"><span class="info-key">🧾 半個月服務費</span><span class="info-val">${fmtMoney(p.serviceFee)||'待填'}</span></div>
+      <div class="info-row"><span class="info-key">📊 公司案件獲利總入帳</span><span class="info-val">$${yearTotal(p).toLocaleString()}</span></div>
+    </div>
+    <div class="info-box"><h3>銀行資訊</h3>
+      <div class="info-row"><span class="info-key">🏦 銀行</span><span class="info-val">${esc(p.bank)||'（請填入）'}</span></div>
+      <div class="info-row"><span class="info-key">👤 銀行戶名</span><span class="info-val">${esc(p.accountHolder)||'（請填入）'}</span></div>
+      <div class="info-row"><span class="info-key">帳號</span><span class="info-val">${esc(p.account)||'（請填入）'}</span></div>
+    </div>
+    <div class="info-box"><h3>備註</h3><div style="font-size:13px;color:var(--text3);padding-top:8px">${esc(p.note)||'（無備註）'}</div></div>`;
+
+  document.getElementById('detail-rent-body').innerHTML = p.rentRecords.length ? p.rentRecords.map((r,idx)=>{
+    const total = r.rent + (r.serviceFee||0);
+    return `<tr>
+      <td>${esc(r.month)}</td><td>$${r.rent.toLocaleString()}</td>
+      <td>${fmtMoney(r.serviceFee)||'—'}</td>
+      <td style="font-weight:700">$${total.toLocaleString()}</td><td>${fmtStatus(r.status)}</td>
+      <td style="color:var(--text3)">${esc(r.note)||'—'}</td>
+      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✏️</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})">🗑️</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-text">尚無收租紀錄</div></div></td></tr>`;
+
+  document.getElementById('detail-repair-body').innerHTML = p.repairRecords.length ? p.repairRecords.map((r,idx)=>`
+    <tr>
+      <td>${esc(r.item)}</td><td>${esc(r.reported)||'—'}</td><td>${esc(r.done)||'—'}</td>
+      <td>${fmtMoney(r.cost)||'待估價'}</td><td>${fmtStatus(r.status)}</td>
+      <td><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})">🗑️</button></td>
+    </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`;
+
+  const totalRent = p.rentRecords.reduce((a,r)=>a+r.rent,0);
+  const totalRepair = p.repairRecords.reduce((a,r)=>a+(r.cost||0),0);
+  document.getElementById('detail-report-summary').innerHTML = `
+    <div class="report-card"><div class="report-val">$${totalRent.toLocaleString()}</div><div class="report-label">累計租金收入</div></div>
+    <div class="report-card"><div class="report-val" style="color:var(--danger)">$${totalRepair.toLocaleString()}</div><div class="report-label">維修費用支出</div></div>
+    <div class="report-card"><div class="report-val" style="color:var(--success)">$${(totalRent-totalRepair).toLocaleString()}</div><div class="report-label">淨收入</div></div>`;
+  document.getElementById('detail-report-body').innerHTML = p.rentRecords.length ? p.rentRecords.map(r=>{
+    const total = r.rent + (r.serviceFee||0);
+    return `<tr><td>${esc(r.month)}</td><td>$${r.rent.toLocaleString()}</td><td>${fmtMoney(r.serviceFee)||'—'}</td><td style="color:var(--success);font-weight:700">$${total.toLocaleString()}</td></tr>`;
+  }).join('') : `<tr><td colspan="4"><div class="empty"><div class="empty-text">尚無資料</div></div></td></tr>`;
+
+  document.getElementById('detail-todo-list').innerHTML = p.todos.length ? p.todos.map((t,idx)=>`
+    <div class="todo-item">
+      <div class="todo-check ${t.done?'done':''}" onclick="toggleTodoGlobal(${p.id},${idx})">${t.done?'✓':''}</div>
+      <div style="flex:1;padding:0 10px"><div class="todo-text ${t.done?'done':''}">${esc(t.text)}</div></div>
+      <span class="todo-priority ${priorityClass(t.priority)}">${esc(t.priority)}</span>
+      <button class="del-btn" onclick="deleteTodo(${p.id},${idx})">🗑️</button>
+    </div>`).join('') : `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">無待辦任務</div></div>`;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  const tabMap = { 'basic':0, 'rent-rec':1, 'repair-rec':2, 'report':3, 'tasks':4 };
+  document.querySelectorAll('.tab')[tabMap[name]].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ═══════════════════════════════ TODO ACTIONS ═══════════════════════════════
+function toggleTodoGlobal(propId, idx){
+  const p = getProp(propId);
+  if(!p) return;
+  p.todos[idx].done = !p.todos[idx].done;
+  refreshAll();
+}
+function deleteTodo(propId, idx){
+  if(!confirm('確定要刪除這項待辦任務嗎？')) return;
+  const p = getProp(propId);
+  p.todos.splice(idx,1);
+  refreshAll();
+}
+
+// ═══════════════════════════════ RENT / REPAIR DELETE ═══════════════════════════════
+function deleteRentRecord(propId, idx){
+  if(!confirm('確定要刪除這筆收租紀錄嗎？')) return;
+  const p = getProp(propId);
+  p.rentRecords.splice(idx,1);
+  refreshAll();
+}
+function deleteRepairRecord(propId, idx){
+  if(!confirm('確定要刪除這筆維修紀錄嗎？')) return;
+  const p = getProp(propId);
+  p.repairRecords.splice(idx,1);
+  refreshAll();
+}
+
+// ═══════════════════════════════ PROPERTY DELETE ═══════════════════════════════
+function deleteProperty(id){
+  const p = getProp(id);
+  if(!p) return;
+  if(!confirm(`確定要刪除「${p.name}」嗎？此操作將移除所有相關的收租、維修與待辦紀錄，無法復原。`)) return;
+  properties = properties.filter(x=>x.id!==id);
+  if(currentPropId === id){
+    currentPropId = null;
+    showPage('properties');
+  }
+  refreshAll();
+}
+
+// ═══════════════════════════════ REFRESH ALL ═══════════════════════════════
+function refreshAll(){
+  renderStats();
+  renderAllCards();
+  renderVacant();
+  renderAlerts();
+  renderRecent();
+  const activePage = document.querySelector('.page.active').id.replace('page-','');
+  if(activePage==='rent') renderRentPage();
+  if(activePage==='repair') renderRepairPage();
+  if(activePage==='todo') renderTodoPage();
+  if(activePage==='detail' && currentPropId) renderDetail();
+  persistData();
+}
+
+// ═══════════════════════════════ CLOUD SYNC (Upstash via /api/data) ═══════════════════════════════
+let saveTimer = null;
+function setSyncStatus(text, isError){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = isError ? '#DC2626' : '';
+}
+function persistData(){
+  clearTimeout(saveTimer);
+  setSyncStatus('● 儲存中…');
+  saveTimer = setTimeout(async () => {
+    try{
+      const resp = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties, nextPropId })
+      });
+      if(!resp.ok){
+        const err = await resp.json().catch(()=>({}));
+        throw new Error(err.error || ('HTTP ' + resp.status));
+      }
+      setSyncStatus('● 已同步雲端');
+    }catch(e){
+      console.error('儲存失敗', e);
+      setSyncStatus('⚠ 儲存失敗（請檢查網路或設定）', true);
+    }
+  }, 500);
+}
+async function loadData(){
+  const loadingEl = document.getElementById('loading-overlay');
+  try{
+    setSyncStatus('● 讀取雲端資料中…');
+    const resp = await fetch('/api/data');
+    if(!resp.ok){
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err.error || ('HTTP ' + resp.status));
+    }
+    const data = await resp.json();
+    if(data && Array.isArray(data.properties) && data.properties.length){
+      properties = data.properties;
+      nextPropId = data.nextPropId || (Math.max(...properties.map(p=>p.id)) + 1);
+      setSyncStatus('● 已同步雲端');
+    } else {
+      // Redis 裡還沒有資料 → 用預設範例資料當作第一次的初始值，並寫回雲端
+      setSyncStatus('● 初始化雲端資料…');
+      persistData();
+    }
+  }catch(e){
+    console.error('載入失敗，改用預設資料顯示', e);
+    setSyncStatus('⚠ 無法連線雲端，暫時顯示本機資料（重新整理可能會消失）', true);
+  }
+  if(loadingEl) loadingEl.style.display = 'none';
+  renderStats(); renderAllCards(); renderVacant(); renderAlerts(); renderRecent();
+  const activePage = document.querySelector('.page.active').id.replace('page-','');
+  if(activePage==='rent') renderRentPage();
+  if(activePage==='repair') renderRepairPage();
+  if(activePage==='todo') renderTodoPage();
+  if(activePage==='detail' && currentPropId) renderDetail();
+}
+
+// ═══════════════════════════════ MODAL: PROPERTY ═══════════════════════════════
+function openPropertyModal(id){
+  modalCtx = { type: id ? 'editProperty' : 'addProperty', propId: id || null, editIndex: null };
+  const p = id ? getProp(id) : null;
+  document.getElementById('modal-title').textContent = id ? '編輯物件' : '新增物件';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-section">基本資訊</div>
+    <div class="form-group"><label class="form-label">物件名稱</label><input class="form-input" id="pf-name" placeholder="例：崇善15街 601室" value="${esc(p?p.name:'')}"></div>
+    <div class="form-group"><label class="form-label">地址</label><input class="form-input" id="pf-address" placeholder="台南市東區..." value="${esc(p?p.address:'')}"></div>
+    <div class="form-group"><label class="form-label">承租人</label><input class="form-input" id="pf-tenant" placeholder="姓名" value="${esc(p?p.tenant:'')}"></div>
+    <div class="form-section">簽約資訊</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">簽約日期</label><input class="form-input" id="pf-signdate" placeholder="115/06/09" value="${esc(p?p.signDate:'')}"></div>
+      <div class="form-group"><label class="form-label">狀態</label>
+        <select class="form-input" id="pf-status" onchange="toggleVacantField()">
+          <option value="new" ${p&&p.status==='new'?'selected':''}>新簽約</option>
+          <option value="renew" ${p&&p.status==='renew'?'selected':''}>續約</option>
+          <option value="expire" ${p&&p.status==='expire'?'selected':''}>即將到期</option>
+          <option value="vacant" ${p&&p.status==='vacant'?'selected':''}>待租（閒置中）</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" id="pf-period-row">
+      <div class="form-group"><label class="form-label">租期開始</label><input class="form-input" id="pf-start" placeholder="115/06/10" value="${esc(p?p.periodStart:'')}"></div>
+      <div class="form-group"><label class="form-label">租期結束</label><input class="form-input" id="pf-end" placeholder="116/06/09" value="${esc(p?p.periodEnd:'')}"></div>
+    </div>
+    <div class="form-group" id="pf-vacant-row" style="display:${p&&p.status==='vacant'?'block':'none'}">
+      <label class="form-label">閒置起始日期</label>
+      <input class="form-input" type="date" id="pf-vacantsince" value="${p&&p.vacantSince?p.vacantSince:''}">
+    </div>
+    <div class="form-section">租金設定</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">月租金</label><input class="form-input" type="number" id="pf-rent" placeholder="0" value="${p?p.rent:''}"></div>
+      <div class="form-group"><label class="form-label">押金</label><input class="form-input" type="number" id="pf-deposit" placeholder="0" value="${p&&p.deposit?p.deposit:''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">半個月服務費</label><input class="form-input" type="number" id="pf-servicefee" placeholder="0" value="${p&&p.serviceFee?p.serviceFee:''}"></div>
+    </div>
+    <div class="form-section">銀行資訊</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">銀行名稱</label><input class="form-input" id="pf-bank" placeholder="永豐銀行(807)" value="${esc(p?p.bank:'')}"></div>
+      <div class="form-group"><label class="form-label">銀行戶名</label><input class="form-input" id="pf-accountholder" placeholder="悅管家管理顧問股份有限公司" value="${esc(p?p.accountHolder:'悅管家管理顧問股份有限公司')}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">帳號</label><input class="form-input" id="pf-account" placeholder="XXX-XXX-XXXXXXX-X" value="${esc(p?p.account:'')}"></div>
+    <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="pf-note" rows="3" placeholder="其他備註...">${esc(p?p.note:'')}</textarea></div>`;
+  document.getElementById('modal-footer-left').innerHTML = id ? `<button class="btn btn-danger" onclick="deletePropertyFromModal(${id})">🗑️ 刪除此物件</button>` : '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function toggleVacantField(){
+  const status = document.getElementById('pf-status').value;
+  document.getElementById('pf-vacant-row').style.display = status === 'vacant' ? 'block' : 'none';
+}
+function deletePropertyFromModal(id){
+  closeModal();
+  deleteProperty(id);
+}
+
+// ═══════════════════════════════ MODAL: RENT ═══════════════════════════════
+function openRentModal(propId, editIndex){
+  modalCtx = { type:'rent', propId, editIndex: editIndex!=null?editIndex:null };
+  const p = getProp(propId);
+  const r = editIndex!=null ? p.rentRecords[editIndex] : null;
+  document.getElementById('modal-title').textContent = (editIndex!=null?'編輯':'新增') + `收款紀錄 — ${p.name}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">收款月份</label><input class="form-input" id="rf-month" placeholder="115/08" value="${esc(r?r.month:'')}"></div>
+      <div class="form-group"><label class="form-label">狀態</label>
+        <select class="form-input" id="rf-status">
+          <option value="paid" ${r&&r.status==='paid'?'selected':''}>已收款</option>
+          <option value="pending" ${r&&r.status==='pending'?'selected':''}>待確認</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">租金</label><input class="form-input" type="number" id="rf-rent" placeholder="0" value="${r?r.rent:p.rent}"></div>
+      <div class="form-group"><label class="form-label">半個月服務費</label><input class="form-input" type="number" id="rf-servicefee" placeholder="0" value="${r&&r.serviceFee?r.serviceFee:''}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="rf-note" placeholder="備註..." value="${esc(r?r.note:'')}"></div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// ═══════════════════════════════ MODAL: REPAIR ═══════════════════════════════
+function openRepairModal(propId, editIndex){
+  modalCtx = { type:'repair', propId, editIndex: editIndex!=null?editIndex:null };
+  const p = getProp(propId);
+  const r = editIndex!=null ? p.repairRecords[editIndex] : null;
+  document.getElementById('modal-title').textContent = (editIndex!=null?'編輯':'新增') + `維修紀錄 — ${p.name}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label class="form-label">維修項目</label><input class="form-input" id="rpf-item" placeholder="例：冷氣保養" value="${esc(r?r.item:'')}"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">回報日期</label><input class="form-input" id="rpf-reported" placeholder="115/07/18" value="${esc(r?r.reported:'')}"></div>
+      <div class="form-group"><label class="form-label">處理日期</label><input class="form-input" id="rpf-done" placeholder="115/07/20" value="${esc(r?r.done:'')}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">費用</label><input class="form-input" type="number" id="rpf-cost" placeholder="0" value="${r&&r.cost?r.cost:''}"></div>
+      <div class="form-group"><label class="form-label">狀態</label>
+        <select class="form-input" id="rpf-status">
+          <option value="progress" ${r&&r.status==='progress'?'selected':''}>處理中</option>
+          <option value="done" ${r&&r.status==='done'?'selected':''}>已完成</option>
+          <option value="open" ${r&&r.status==='open'?'selected':''}>待處理</option>
+        </select>
+      </div>
+    </div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// ═══════════════════════════════ MODAL: TODO ═══════════════════════════════
+function openTodoModal(propId){
+  modalCtx = { type:'todo', propId, editIndex: null };
+  const p = getProp(propId);
+  document.getElementById('modal-title').textContent = `新增待辦任務 — ${p.name}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label class="form-label">任務內容</label><input class="form-input" id="tf-text" placeholder="描述待辦事項..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">優先度</label>
+        <select class="form-input" id="tf-priority"><option>緊急</option><option>一般</option><option>低</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="tf-due" type="date"></div>
+    </div>`;
+  document.getElementById('modal-footer-left').innerHTML = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// ═══════════════════════════════ MODAL: CLOSE / SAVE ═══════════════════════════════
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+
+function saveModal(){
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+  if(modalCtx.type === 'addProperty' || modalCtx.type === 'editProperty'){
+    const name = v('pf-name');
+    if(!name){ alert('請輸入物件名稱'); return; }
+    const data = {
+      name, address: v('pf-address'), tenant: v('pf-tenant'),
+      status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'),
+      rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
+      bank: v('pf-bank'), account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
+      vacantSince: v('pf-status')==='vacant' ? (v('pf-vacantsince')||null) : null
+    };
+    if(modalCtx.type === 'addProperty'){
+      properties.push({ id: nextPropId++, ...data, rentRecords: [], repairRecords: [], todos: [] });
+    } else {
+      const p = getProp(modalCtx.propId);
+      Object.assign(p, data);
+    }
+  }
+  else if(modalCtx.type === 'rent'){
+    const p = getProp(modalCtx.propId);
+    const month = v('rf-month');
+    if(!month){ alert('請輸入收款月份'); return; }
+    const data = {
+      month, rent: Number(v('rf-rent'))||0, serviceFee: v('rf-servicefee')?Number(v('rf-servicefee')):null,
+      status: v('rf-status'), note: v('rf-note')
+    };
+    if(modalCtx.editIndex!=null) p.rentRecords[modalCtx.editIndex] = data;
+    else p.rentRecords.unshift(data);
+  }
+  else if(modalCtx.type === 'repair'){
+    const p = getProp(modalCtx.propId);
+    const item = v('rpf-item');
+    if(!item){ alert('請輸入維修項目'); return; }
+    const data = { item, reported: v('rpf-reported'), done: v('rpf-done'), cost: v('rpf-cost')?Number(v('rpf-cost')):null, status: v('rpf-status') };
+    if(modalCtx.editIndex!=null) p.repairRecords[modalCtx.editIndex] = data;
+    else p.repairRecords.unshift(data);
+  }
+  else if(modalCtx.type === 'todo'){
+    const p = getProp(modalCtx.propId);
+    const text = v('tf-text');
+    if(!text){ alert('請輸入任務內容'); return; }
+    p.todos.unshift({ text, priority: v('tf-priority'), done:false });
+  }
+
+  closeModal();
+  refreshAll();
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+// ═══════════════════════════════ INIT ═══════════════════════════════
+loadData();
+</script>
+</body>
+</html>
