@@ -125,6 +125,7 @@
   .badge-new { background: #FEE2E2; color: var(--danger); }
   .badge-expire { background: #FEE2E2; color: var(--danger); }
   .badge-vacant { background: #F3E8FF; color: #7E22CE; }
+  .badge-dealtype { background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; border: 1px solid var(--border); }
   .idle-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2); }
   .idle-item:last-child { border-bottom: none; padding-bottom: 0; }
   .idle-days { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
@@ -441,8 +442,8 @@
       </div>
       <span id="detail-badge" class="badge" style="margin-left:12px"></span>
       <div class="detail-header-spacer"></div>
-      <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(currentPropId)">✏️ 編輯物件</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteProperty(currentPropId)" style="margin-left:8px">🗑️ 刪除物件</button>
+      <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(currentPropId)">✅ 編輯物件</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProperty(currentPropId)" style="margin-left:8px">❎ 刪除物件</button>
     </div>
 
     <div class="tabs">
@@ -589,6 +590,7 @@ let currentReportId = null;
 
 // ═══════════════════════════════ HELPERS ═══════════════════════════════
 function statusLabel(s){ return { renew:'續約', new:'新簽約', expire:'即將到期', vacant:'待租' }[s] || s; }
+function dealTypeLabel(t){ return { lease:'包租', management:'代管' }[t] || '未設定'; }
 function statusClass(s){ return { renew:'badge-renew', new:'badge-new', expire:'badge-expire', vacant:'badge-vacant' }[s] || ''; }
 function idleDays(p){
   if(!p.vacantSince) return null;
@@ -635,7 +637,10 @@ function propCardHTML(p){
     <div class="prop-card">
       <div class="prop-card-header" onclick="openDetail(${p.id})">
         <div><div class="prop-name">${esc(p.name)}</div><div class="prop-address">${esc(p.address)}</div></div>
-        <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
+          <span class="badge-dealtype">${dealTypeLabel(p.dealType)}</span>
+        </div>
       </div>
       <div class="prop-card-body" onclick="openDetail(${p.id})">
         <div class="prop-row"><span class="prop-key">👤 承租人</span><span class="prop-val">${esc(p.tenant)||'—'}</span></div>
@@ -647,8 +652,8 @@ function propCardHTML(p){
       </div>
       <div class="prop-card-footer">
         <button class="btn btn-secondary btn-sm" onclick="openDetail(${p.id})">詳情</button>
-        <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(${p.id})">✏️ 編輯</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProperty(${p.id})">🗑️ 刪除</button>
+        <button class="btn btn-secondary btn-sm" onclick="openPropertyModal(${p.id})">✅ 編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProperty(${p.id})">❎ 刪除</button>
       </div>
     </div>`;
 }
@@ -737,7 +742,7 @@ function renderRentPage(){
               <td style="font-weight:700">$${total.toLocaleString()}</td>
               <td>${fmtStatus(r.status)}</td>
               <td style="color:var(--text3)">${esc(r.note)||'—'}</td>
-              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✏️</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
+              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✅</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})" title="刪除">❎</button></td>
             </tr>`;
           }).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-text">尚無收租紀錄</div></div></td></tr>`}
         </tbody>
@@ -765,7 +770,7 @@ function renderRepairPage(){
               <td>${esc(r.done)||'—'}</td>
               <td>${fmtMoney(r.cost)||'待估價'}</td>
               <td>${fmtStatus(r.status)}</td>
-              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✏️</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})" title="刪除">🗑️</button></td>
+              <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✅</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})" title="刪除">❎</button></td>
             </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`}
         </tbody>
       </table>
@@ -787,7 +792,7 @@ function renderTodoPage(){
           <div class="todo-check ${t.done?'done':''}" onclick="toggleTodoGlobal(${p.id},${idx})">${t.done?'✓':''}</div>
           <div style="flex:1;padding:0 10px"><div class="todo-text ${t.done?'done':''}">${esc(t.text)}</div></div>
           <span class="todo-priority ${priorityClass(t.priority)}">${esc(t.priority)}</span>
-          <button class="del-btn" onclick="deleteTodo(${p.id},${idx})" title="刪除">🗑️</button>
+          <button class="del-btn" onclick="deleteTodo(${p.id},${idx})" title="刪除">❎</button>
         </div>`).join('') : `<div class="empty"><div class="empty-text">尚無待辦任務</div></div>`}
     </div>`).join('');
 }
@@ -856,7 +861,7 @@ function renderReportPage(){
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin:14px 0;">
       <button class="btn btn-secondary btn-sm" onclick="openStaffNameModal(${report.id})">＋ 新增員工</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteReportMonth(${report.id})">🗑️ 刪除本月報表</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteReportMonth(${report.id})">❎ 刪除本月報表</button>
     </div>
     ${report.staff.length ? report.staff.map(s=>{
       const total = staffTotal(s);
@@ -868,9 +873,9 @@ function renderReportPage(){
         <div class="prop-group-header">
           <span class="prop-group-name">👤 ${esc(s.name)}</span>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-secondary btn-xs" onclick="openStaffNameModal(${report.id},${s.id})">✏️ 改名</button>
+            <button class="btn btn-secondary btn-xs" onclick="openStaffNameModal(${report.id},${s.id})">✅ 改名</button>
             <button class="btn btn-primary btn-xs" onclick="openReportItemModal(${report.id},${s.id})">＋ 新增項目</button>
-            <button class="btn btn-danger btn-xs" onclick="deleteStaff(${report.id},${s.id})">🗑️ 刪除員工</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteStaff(${report.id},${s.id})">❎ 刪除員工</button>
           </div>
         </div>
         <table>
@@ -882,7 +887,7 @@ function renderReportPage(){
                 <td>${prop ? esc(prop.name) : (it.propName ? esc(it.propName) : '—')}</td>
                 <td style="color:var(--text3)">${esc(it.note)||'—'}</td>
                 <td style="font-weight:700">${fmtNum(Number(it.amount)||0)}</td>
-                <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openReportItemModal(${report.id},${s.id},${it.id})" title="編輯">✏️</button><button class="del-btn" onclick="deleteReportItem(${report.id},${s.id},${it.id})" title="刪除">🗑️</button></td>
+                <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openReportItemModal(${report.id},${s.id},${it.id})" title="編輯">✅</button><button class="del-btn" onclick="deleteReportItem(${report.id},${s.id},${it.id})" title="刪除">❎</button></td>
               </tr>`;
             }).join('') : `<tr><td colspan="4"><div class="empty"><div class="empty-text">尚無項目，點「＋ 新增項目」開始輸入</div></div></td></tr>`}
           </tbody>
@@ -959,6 +964,7 @@ function renderDetail(){
   document.getElementById('detail-basic-grid').innerHTML = `
     <div class="info-box"><h3>基本資訊</h3>
       <div class="info-row"><span class="info-key">📍 地址</span><span class="info-val">${esc(p.address)}</span></div>
+      <div class="info-row"><span class="info-key">📁 經營類型</span><span class="info-val">${dealTypeLabel(p.dealType)}</span></div>
       <div class="info-row"><span class="info-key">👤 承租人</span><span class="info-val">${esc(p.tenant)||'—'}</span></div>
       <div class="info-row"><span class="info-key">📅 簽約日期</span><span class="info-val">${p.signDate}</span></div>
       <div class="info-row"><span class="info-key">⏱️ 租期</span><span class="info-val">${p.periodStart}-${p.periodEnd}</span></div>
@@ -984,7 +990,7 @@ function renderDetail(){
       <td>${fmtMoney(r.serviceFee)||'—'}</td>
       <td style="font-weight:700">$${total.toLocaleString()}</td><td>${fmtStatus(r.status)}</td>
       <td style="color:var(--text3)">${esc(r.note)||'—'}</td>
-      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✏️</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})">🗑️</button></td>
+      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRentModal(${p.id},${idx})" title="編輯／修改狀態">✅</button><button class="del-btn" onclick="deleteRentRecord(${p.id},${idx})">❎</button></td>
     </tr>`;
   }).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-text">尚無收租紀錄</div></div></td></tr>`;
 
@@ -992,7 +998,7 @@ function renderDetail(){
     <tr>
       <td>${esc(r.item)}</td><td>${esc(r.reported)||'—'}</td><td>${esc(r.done)||'—'}</td>
       <td>${fmtMoney(r.cost)||'待估價'}</td><td>${fmtStatus(r.status)}</td>
-      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✏️</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})">🗑️</button></td>
+      <td style="white-space:nowrap"><button class="edit-icon-btn" onclick="openRepairModal(${p.id},${idx})" title="編輯">✅</button><button class="del-btn" onclick="deleteRepairRecord(${p.id},${idx})">❎</button></td>
     </tr>`).join('') : `<tr><td colspan="6"><div class="empty"><div class="empty-text">尚無維修紀錄</div></div></td></tr>`;
 
   const totalRent = p.rentRecords.reduce((a,r)=>a+r.rent,0);
@@ -1011,7 +1017,7 @@ function renderDetail(){
       <div class="todo-check ${t.done?'done':''}" onclick="toggleTodoGlobal(${p.id},${idx})">${t.done?'✓':''}</div>
       <div style="flex:1;padding:0 10px"><div class="todo-text ${t.done?'done':''}">${esc(t.text)}</div></div>
       <span class="todo-priority ${priorityClass(t.priority)}">${esc(t.priority)}</span>
-      <button class="del-btn" onclick="deleteTodo(${p.id},${idx})">🗑️</button>
+      <button class="del-btn" onclick="deleteTodo(${p.id},${idx})">❎</button>
     </div>`).join('') : `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">無待辦任務</div></div>`;
 }
 
@@ -1211,6 +1217,12 @@ function openPropertyModal(id){
   document.getElementById('modal-body').innerHTML = `
     <div class="form-section">基本資訊</div>
     <div class="form-group"><label class="form-label">物件名稱</label><input class="form-input" id="pf-name" placeholder="例：崇善15街 601室" value="${esc(p?p.name:'')}"></div>
+    <div class="form-group"><label class="form-label">經營類型</label>
+      <select class="form-input" id="pf-dealtype">
+        <option value="lease" ${p&&p.dealType==='lease'?'selected':''}>包租</option>
+        <option value="management" ${p&&p.dealType==='management'?'selected':''}>代管</option>
+      </select>
+    </div>
     <div class="form-group"><label class="form-label">地址</label><input class="form-input" id="pf-address" placeholder="台南市東區..." value="${esc(p?p.address:'')}"></div>
     <div class="form-group"><label class="form-label">承租人</label><input class="form-input" id="pf-tenant" placeholder="姓名" value="${esc(p?p.tenant:'')}"></div>
     <div class="form-section">簽約資訊</div>
@@ -1250,7 +1262,7 @@ function openPropertyModal(id){
     </div>
     <div class="form-group"><label class="form-label">帳號</label><input class="form-input" id="pf-account" placeholder="XXX-XXX-XXXXXXX-X" value="${esc(p?p.account:'')}"></div>
     <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="pf-note" rows="3" placeholder="其他備註...">${esc(p?p.note:'')}</textarea></div>`;
-  document.getElementById('modal-footer-left').innerHTML = id ? `<button class="btn btn-danger" onclick="deletePropertyFromModal(${id})">🗑️ 刪除此物件</button>` : '';
+  document.getElementById('modal-footer-left').innerHTML = id ? `<button class="btn btn-danger" onclick="deletePropertyFromModal(${id})">❎ 刪除此物件</button>` : '';
   document.getElementById('modal-overlay').classList.add('open');
 }
 function toggleVacantField(){
@@ -1415,7 +1427,7 @@ function saveModal(){
     const name = v('pf-name');
     if(!name){ alert('請輸入物件名稱'); return; }
     const data = {
-      name, address: v('pf-address'), tenant: v('pf-tenant'),
+      name, address: v('pf-address'), tenant: v('pf-tenant'), dealType: v('pf-dealtype'),
       status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'), depositDate: v('pf-depositdate'),
       rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
       bank: v('pf-bank'), account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
