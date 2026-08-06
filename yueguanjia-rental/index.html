@@ -816,7 +816,8 @@ function renderReportPage(){
     currentReportId = monthlyReports[monthlyReports.length-1].id;
   }
 
-  tabsWrap.innerHTML = monthlyReports.map(r=>`
+  const sortedReports = [...monthlyReports].sort((a,b)=> a.month.localeCompare(b.month));
+  tabsWrap.innerHTML = sortedReports.map(r=>`
     <button class="tab ${r.id===currentReportId?'active':''}" onclick="switchReportMonth(${r.id})">${esc(r.month)}</button>
   `).join('');
 
@@ -835,7 +836,25 @@ function renderReportPage(){
       <div class="report-card"><div class="report-val" style="color:var(--warning)">${fmtNum(sumTax)}</div><div class="report-label">預扣稅加總</div></div>
       <div class="report-card"><div class="report-val" style="color:var(--success)">${fmtNum(sumNet)}</div><div class="report-label">總獎金支出（實領總和）</div></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px;">
+    <div class="table-wrap">
+      <div class="table-header"><span class="table-header-title">👥 ${esc(report.month)} 全員薪資總覽</span></div>
+      <table>
+        <thead><tr><th>姓名</th><th>獎金總結</th><th>二代健保</th><th>預扣稅</th><th>實領獎金</th></tr></thead>
+        <tbody>
+          ${report.staff.length ? report.staff.map(s=>{
+            const total = staffTotal(s);
+            return `<tr style="cursor:pointer" onclick="document.getElementById('staff-card-${s.id}').scrollIntoView({behavior:'smooth',block:'start'})">
+              <td style="font-weight:700">${esc(s.name)}</td>
+              <td>${fmtNum(total)}</td>
+              <td style="color:var(--accent)">${fmtNum(staffInsurance(total))}</td>
+              <td style="color:var(--warning)">${fmtNum(staffTax(total))}</td>
+              <td style="font-weight:700;color:var(--success)">${fmtNum(staffNet(total))}</td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="5"><div class="empty"><div class="empty-text">本月尚無員工資料</div></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin:14px 0;">
       <button class="btn btn-secondary btn-sm" onclick="openStaffNameModal(${report.id})">＋ 新增員工</button>
       <button class="btn btn-danger btn-sm" onclick="deleteReportMonth(${report.id})">🗑️ 刪除本月報表</button>
     </div>
@@ -845,7 +864,7 @@ function renderReportPage(){
       const tax = staffTax(total);
       const net = staffNet(total);
       return `
-      <div class="table-wrap">
+      <div class="table-wrap" id="staff-card-${s.id}">
         <div class="prop-group-header">
           <span class="prop-group-name">👤 ${esc(s.name)}</span>
           <div style="display:flex;gap:8px;">
@@ -1333,8 +1352,17 @@ function openReportMonthModal(){
   document.getElementById('modal-cancel-btn').textContent = '取消';
   modalCtx = { type: 'reportMonth' };
   document.getElementById('modal-title').textContent = '新增月份';
+  const nowRocYear = new Date().getFullYear() - 1911;
+  const yearOptions = Array.from({length:6}, (_,i) => nowRocYear - 2 + i)
+    .map(y => `<option value="${y}" ${y===nowRocYear?'selected':''}>民國 ${y} 年</option>`).join('');
+  const nowMonth = new Date().getMonth() + 1;
+  const monthOptions = Array.from({length:12}, (_,i) => i+1)
+    .map(m => `<option value="${m}" ${m===nowMonth?'selected':''}>${m} 月</option>`).join('');
   document.getElementById('modal-body').innerHTML = `
-    <div class="form-group"><label class="form-label">月份</label><input class="form-input" id="rm-month" placeholder="115/08"></div>`;
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">年份</label><select class="form-input" id="rm-year">${yearOptions}</select></div>
+      <div class="form-group"><label class="form-label">月份</label><select class="form-input" id="rm-monthnum">${monthOptions}</select></div>
+    </div>`;
   document.getElementById('modal-footer-left').innerHTML = '';
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -1426,8 +1454,11 @@ function saveModal(){
     p.todos.unshift({ text, priority: v('tf-priority'), done:false });
   }
   else if(modalCtx.type === 'reportMonth'){
-    const month = v('rm-month');
-    if(!month){ alert('請輸入月份'); return; }
+    const year = v('rm-year');
+    const monthNum = v('rm-monthnum');
+    if(!year || !monthNum){ alert('請選擇年份與月份'); return; }
+    const month = year + '/' + String(monthNum).padStart(2,'0');
+    if(monthlyReports.some(r=>r.month===month)){ alert('這個月份已經建立過了，請直接切換查看'); return; }
     const newReport = { id: nextReportId++, month, staff: [] };
     monthlyReports.push(newReport);
     currentReportId = newReport.id;
