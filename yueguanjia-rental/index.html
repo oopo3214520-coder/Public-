@@ -125,6 +125,21 @@
   .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .section-title span { font-size: 12px; color: var(--text3); font-weight: 400; }
   .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .properties-grid.compact-view { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .view-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; }
+  .view-toggle-btn {
+    padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
+    color: var(--text3); cursor: pointer; border: none; background: none; transition: all 0.15s; white-space: nowrap;
+  }
+  .view-toggle-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+  .view-toggle-btn:hover:not(.active) { color: var(--text2); }
+  .prop-chip {
+    background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border);
+    box-shadow: var(--shadow); padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .prop-chip:hover { box-shadow: var(--shadow-md); border-color: var(--primary); transform: translateY(-1px); }
+  .prop-chip-name { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); }
   .prop-card {
     background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
     box-shadow: var(--shadow); overflow: hidden; transition: all 0.2s;
@@ -414,7 +429,17 @@
   <div class="page" id="page-properties">
     <div class="page-header">
       <div><div class="page-title">物件管理</div><div class="page-subtitle">所有租賃物件一覽，可編輯或刪除</div></div>
-      <button class="btn btn-primary" onclick="openPropertyModal()">＋ 新增物件</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="view-toggle" id="prop-view-toggle">
+          <button class="view-toggle-btn active" id="view-btn-grid" onclick="setPropViewMode('grid')" title="大卡片檢視">🔲 大卡片</button>
+          <button class="view-toggle-btn" id="view-btn-compact" onclick="setPropViewMode('compact')" title="精簡列表檢視">📋 精簡列表</button>
+        </div>
+        <button class="btn btn-primary" onclick="openPropertyModal()">＋ 新增物件</button>
+      </div>
+    </div>
+    <div style="position:relative;margin-bottom:18px;max-width:420px;">
+      <input class="form-input" id="prop-search" placeholder="搜尋物件名稱、地址或承租人..." oninput="renderAllCards()" style="padding-left:36px;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text4);font-size:14px;">🔍</span>
     </div>
     <div class="properties-grid" id="prop-grid-2"></div>
   </div>
@@ -467,7 +492,7 @@
       <button class="btn btn-danger btn-sm" onclick="deleteProperty(currentPropId)" style="margin-left:8px">❎ 刪除物件</button>
     </div>
 
-    <div class="tabs">
+    <div class="tabs" id="detail-tabs">
       <button class="tab active" onclick="switchTab('basic')">📋 基本資訊</button>
       <button class="tab" onclick="switchTab('rent-rec')">💰 收租紀錄</button>
       <button class="tab" onclick="switchTab('repair-rec')">🔧 維修日誌</button>
@@ -702,10 +727,32 @@ function propCardHTML(p){
       </div>
     </div>`;
 }
+let propViewMode = 'grid';
+function propChipHTML(p){
+  return `<div class="prop-chip" onclick="openDetail(${p.id})"><span class="prop-chip-name">${esc(p.name)}</span></div>`;
+}
+function setPropViewMode(mode){
+  propViewMode = mode;
+  document.getElementById('view-btn-grid').classList.toggle('active', mode==='grid');
+  document.getElementById('view-btn-compact').classList.toggle('active', mode==='compact');
+  renderAllCards();
+}
 function renderAllCards(){
-  const html = properties.length ? properties.map(propCardHTML).join('') :
-    `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-text">還沒有房屋資訊<br>點擊「新增房屋」按鈕開始建立</div></div>`;
-  document.getElementById('prop-grid-2').innerHTML = html;
+  const searchEl = document.getElementById('prop-search');
+  const kw = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const filtered = kw ? properties.filter(p =>
+    (p.name||'').toLowerCase().includes(kw) ||
+    (p.address||'').toLowerCase().includes(kw) ||
+    (p.tenant||'').toLowerCase().includes(kw)
+  ) : properties;
+  const gridEl = document.getElementById('prop-grid-2');
+  gridEl.classList.toggle('compact-view', propViewMode === 'compact');
+  const renderFn = propViewMode === 'compact' ? propChipHTML : propCardHTML;
+  const html = filtered.length ? filtered.map(renderFn).join('') :
+    (properties.length
+      ? `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-text">找不到符合「${esc(kw)}」的物件</div></div>`
+      : `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-text">還沒有房屋資訊<br>點擊「新增房屋」按鈕開始建立</div></div>`);
+  gridEl.innerHTML = html;
 }
 
 // ═══════════════════════════════ RENDER: ALERTS & RECENT ═══════════════════════════════
@@ -1137,10 +1184,10 @@ function renderDetail(){
 }
 
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#detail-tabs .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   const tabMap = { 'basic':0, 'rent-rec':1, 'repair-rec':2, 'report':3, 'tasks':4 };
-  document.querySelectorAll('.tab')[tabMap[name]].classList.add('active');
+  document.querySelectorAll('#detail-tabs .tab')[tabMap[name]].classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
 }
 
