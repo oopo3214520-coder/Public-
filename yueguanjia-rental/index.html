@@ -393,6 +393,11 @@
       <div id="vacant-list"></div>
     </div>
 
+    <div class="alert-card" style="margin-bottom:24px;">
+      <div class="section-title" style="margin-bottom:12px;">📈 近12個月收入趨勢 <span>依已收款紀錄統計</span></div>
+      <div style="position:relative;height:220px;"><canvas id="income-chart"></canvas></div>
+    </div>
+
     <div class="bottom-grid">
       <div class="alert-card">
         <div class="section-title" style="margin-bottom:12px;">⚠️ 警告與提醒</div>
@@ -541,6 +546,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ═══════════════════════════════ DATA ═══════════════════════════════
 let properties = [
@@ -629,6 +635,29 @@ function yearTotal(p){
 }
 function esc(s){ return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// ═══════════════════════════════ SMART HELPERS (民國日期解析) ═══════════════════════════════
+function parseRocDate(str){
+  if(!str) return null;
+  const parts = String(str).split('/');
+  if(parts.length < 3) return null;
+  const rocYear = Number(parts[0]), month = Number(parts[1]), day = Number(parts[2]);
+  if(!rocYear || !month || !day) return null;
+  const d = new Date(rocYear + 1911, month - 1, day);
+  return isNaN(d) ? null : d;
+}
+function rocYM(offsetMonths){
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (offsetMonths||0));
+  return (d.getFullYear() - 1911) + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+function daysUntil(date){
+  if(!date) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(date); target.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+
 // ═══════════════════════════════ RENDER: STATS ═══════════════════════════════
 function renderStats(){
   const totalProps = properties.length;
@@ -682,10 +711,43 @@ function renderAllCards(){
 // ═══════════════════════════════ RENDER: ALERTS & RECENT ═══════════════════════════════
 function renderAlerts(){
   let alerts = [];
+  const thisMonth = rocYM(0);
+  const lastMonth = rocYM(-1);
+  const todayDate = new Date().getDate();
+
   properties.forEach(p=>{
     if(!p.serviceFee) alerts.push({dot:'amber', text:`${p.name} — 半個月服務費尚未填寫`, time:`承租人：${p.tenant||'—'}`});
     if(!p.bank || !p.account) alerts.push({dot:'blue', text:`${p.name} — 銀行帳號尚未填寫`, time:'請儘快補齊收款資訊'});
+
+    // 1. 租約到期自動預警（30天內）
+    if(p.status !== 'vacant'){
+      const endDate = parseRocDate(p.periodEnd);
+      const d = daysUntil(endDate);
+      if(d != null && d >= 0 && d <= 30){
+        alerts.push({ dot: d<=7?'red':'amber', text:`${p.name} — 租約還有 ${d} 天到期`, time:`到期日：${p.periodEnd}，建議提前聯繫續約` });
+      } else if(d != null && d < 0 && d >= -14){
+        alerts.push({ dot:'red', text:`${p.name} — 租約已到期 ${Math.abs(d)} 天`, time:`到期日：${p.periodEnd}，請確認續約狀態` });
+      }
+    }
+
+    // 2. 異常收租偵測（上月已收款，本月尚未建立已收款紀錄）
+    if(p.status !== 'vacant' && todayDate > 5){
+      const paidLastMonth = p.rentRecords.some(r => r.month === lastMonth && r.status === 'paid');
+      const paidThisMonth = p.rentRecords.some(r => r.month === thisMonth && r.status === 'paid');
+      if(paidLastMonth && !paidThisMonth){
+        alerts.push({ dot:'red', text:`${p.name} — 疑似逾期未繳`, time:`上月已收款，但本月（${thisMonth}）尚無收款紀錄` });
+      }
+    }
+
+    // 3. 閒置物件智慧建議（閒置超過45天）
+    if(p.status === 'vacant'){
+      const days = idleDays(p);
+      if(days != null && days >= 45){
+        alerts.push({ dot:'red', text:`${p.name} — 已閒置 ${days} 天，超過建議水準`, time:'建議考慮調整租金或更換委刊方式' });
+      }
+    }
   });
+
   const list = document.getElementById('alert-list');
   list.innerHTML = alerts.length ? alerts.map(a=>`
     <div class="alert-item"><div class="alert-dot ${a.dot}"></div><div><div class="alert-text">${esc(a.text)}</div><div class="alert-time">${esc(a.time)}</div></div></div>
@@ -703,6 +765,42 @@ function renderRecent(){
       <div class="record-body"><div class="record-title">${esc(i.title)}</div><div class="record-desc">${esc(i.desc)}</div></div>
       <div class="record-amount" style="color:${i.color}">${i.amount}</div>
     </div>`).join('') : `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">尚無紀錄</div></div>`;
+}
+
+// ═══════════════════════════════ 5. 收入趨勢圖表（近12個月，依已收款紀錄統計） ═══════════════════════════════
+let incomeChartInstance = null;
+function renderIncomeChart(){
+  const canvas = document.getElementById('income-chart');
+  if(!canvas || typeof Chart === 'undefined') return;
+  const labels = [], data = [];
+  for(let i = -11; i <= 0; i++){
+    const ym = rocYM(i);
+    labels.push(ym.slice(-2) + '月');
+    let sum = 0;
+    properties.forEach(p=>{
+      p.rentRecords.forEach(r=>{
+        if(r.month === ym && r.status === 'paid') sum += (Number(r.rent)||0) + (Number(r.serviceFee)||0);
+      });
+    });
+    data.push(sum);
+  }
+  if(incomeChartInstance) incomeChartInstance.destroy();
+  incomeChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: '月收入', data,
+      borderColor: '#17324E', backgroundColor: 'rgba(23,50,78,0.08)',
+      fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#B8863B', pointBorderColor: '#B8863B', borderWidth: 2
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => '$'+(v/1000)+'k', font: { size: 11 } }, grid: { color: '#E3DFD3' } },
+        x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
 }
 
 // ═══════════════════════════════ RENDER: VACANT PROPERTIES ═══════════════════════════════
@@ -956,6 +1054,7 @@ function showPage(name){
   if(name==='repair') renderRepairPage();
   if(name==='todo') renderTodoPage();
   if(name==='report') renderReportPage();
+  if(name==='home') renderIncomeChart();
 }
 
 function openDetail(id){
@@ -1099,6 +1198,7 @@ function refreshAll(){
   if(activePage==='todo') renderTodoPage();
   if(activePage==='detail' && currentPropId) renderDetail();
   if(activePage==='report') renderReportPage();
+  if(activePage==='home') renderIncomeChart();
   persistData();
 }
 
@@ -1108,7 +1208,13 @@ function setSyncStatus(text, isError){
   const el = document.getElementById('sync-status');
   if(!el) return;
   el.textContent = text;
-  el.style.color = isError ? '#DC2626' : '';
+  if(isError){
+    el.style.color = '#F87171';
+  } else if(text.indexOf('已同步') !== -1){
+    el.style.color = '#4ADE80';
+  } else {
+    el.style.color = 'rgba(255,255,255,0.5)';
+  }
 }
 function persistData(){
   clearTimeout(saveTimer);
@@ -1158,6 +1264,7 @@ async function loadData(){
     console.error('載入失敗，改用預設資料顯示', e);
     setSyncStatus('⚠ 無法連線雲端，暫時顯示本機資料（重新整理可能會消失）', true);
   }
+  const generated = autoGenerateMonthlyRentRecords();
   if(loadingEl) loadingEl.style.display = 'none';
   renderStats(); renderAllCards(); renderVacant(); renderAlerts(); renderRecent();
   const activePage = document.querySelector('.page.active').id.replace('page-','');
@@ -1166,6 +1273,23 @@ async function loadData(){
   if(activePage==='todo') renderTodoPage();
   if(activePage==='detail' && currentPropId) renderDetail();
   if(activePage==='report') renderReportPage();
+  if(activePage==='home') renderIncomeChart();
+  if(generated) persistData();
+}
+
+// ═══════════════════════════════ 4. 收租紀錄自動產生（每月自動補上待收款空白紀錄） ═══════════════════════════════
+function autoGenerateMonthlyRentRecords(){
+  const thisMonth = rocYM(0);
+  let added = false;
+  properties.forEach(p=>{
+    if(p.status === 'vacant') return;
+    const exists = p.rentRecords.some(r => r.month === thisMonth);
+    if(!exists){
+      p.rentRecords.unshift({ month: thisMonth, rent: p.rent, serviceFee: p.serviceFee || null, status: 'pending', note: '系統自動產生，請確認收款後打勾' });
+      added = true;
+    }
+  });
+  return added;
 }
 
 // ═══════════════════════════════ MODAL: PROPERTY ═══════════════════════════════
