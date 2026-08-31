@@ -718,7 +718,7 @@ function propCardHTML(p){
         <div class="prop-row"><span class="prop-key">🗓️ 收訂日期</span><span class="prop-val">${esc(p.depositDate)||'—'}</span></div>
         <div class="prop-row"><span class="prop-key">💰 月租金</span><span class="prop-val money">$${p.rent.toLocaleString()}</span></div>
         <div class="prop-row"><span class="prop-key">🧾 半個月服務費</span><span class="prop-val">${fmtMoney(p.serviceFee) || '<span style="color:var(--warning)">待填</span>'}</span></div>
-        <div class="prop-row"><span class="prop-key">🏦 銀行</span><span class="prop-val">${esc(p.bank)||'<span style="color:var(--warning)">待填</span>'}</span></div>
+        <div class="prop-row"><span class="prop-key">🏦 匯入銀行</span><span class="prop-val">${esc(p.bank)||'永豐銀行'}</span></div>
       </div>
       <div class="prop-card-footer">
         <button class="btn btn-secondary btn-sm" onclick="openDetail(${p.id})">詳情</button>
@@ -1139,7 +1139,7 @@ function renderDetail(){
       <div class="info-row"><span class="info-key">📊 公司案件獲利總入帳</span><span class="info-val">$${yearTotal(p).toLocaleString()}</span></div>
     </div>
     <div class="info-box"><h3>銀行資訊</h3>
-      <div class="info-row"><span class="info-key">🏦 銀行</span><span class="info-val">${esc(p.bank)||'（請填入）'}</span></div>
+      <div class="info-row"><span class="info-key">🏦 匯入銀行</span><span class="info-val">${esc(p.bank)||'永豐銀行'}</span></div>
       <div class="info-row"><span class="info-key">👤 銀行戶名</span><span class="info-val">${esc(p.accountHolder)||'（請填入）'}</span></div>
       <div class="info-row"><span class="info-key">帳號</span><span class="info-val">${esc(p.account)||'（請填入）'}</span></div>
     </div>
@@ -1617,7 +1617,7 @@ function saveModal(){
       name, address: v('pf-address'), tenant: v('pf-tenant'), dealType: v('pf-dealtype'),
       status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'), depositDate: v('pf-depositdate'),
       rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
-      bank: v('pf-bank'), account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
+      bank: v('pf-bank') || '永豐銀行', account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
       vacantSince: v('pf-status')==='vacant' ? (v('pf-vacantsince')||null) : null
     };
     if(modalCtx.type === 'addProperty'){
