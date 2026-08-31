@@ -638,6 +638,7 @@ let currentReportId = null;
 // ═══════════════════════════════ HELPERS ═══════════════════════════════
 function statusLabel(s){ return { renew:'續約', new:'新簽約', expire:'即將到期', vacant:'待租' }[s] || s; }
 function dealTypeLabel(t){ return { lease:'包租', management:'代管' }[t] || '未設定'; }
+function paymentCycleLabel(pc){ return { monthly:'月繳', quarterly:'季繳', annual:'年繳' }[pc] || '月繳'; }
 function statusClass(s){ return { renew:'badge-renew', new:'badge-new', expire:'badge-expire', vacant:'badge-vacant' }[s] || ''; }
 function idleDays(p){
   if(!p.vacantSince) return null;
@@ -659,6 +660,22 @@ function yearTotal(p){
   return p.rent * 12 + sf;
 }
 function esc(s){ return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rocToISO(rocStr){
+  if(!rocStr) return '';
+  const parts = String(rocStr).split('/');
+  if(parts.length < 3) return '';
+  const rocYear = Number(parts[0]), month = Number(parts[1]), day = Number(parts[2]);
+  if(!rocYear || !month || !day) return '';
+  return `${rocYear+1911}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function isoToRoc(isoStr){
+  if(!isoStr) return '';
+  const parts = isoStr.split('-');
+  if(parts.length < 3) return '';
+  const gYear = Number(parts[0]), month = Number(parts[1]), day = Number(parts[2]);
+  if(!gYear) return '';
+  return `${gYear-1911}/${String(month).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
+}
 
 // ═══════════════════════════════ SMART HELPERS (民國日期解析) ═══════════════════════════════
 function parseRocDate(str){
@@ -708,7 +725,10 @@ function propCardHTML(p){
       <div class="prop-card-header" onclick="openDetail(${p.id})">
         <div><div class="prop-name">${esc(p.name)}</div><div class="prop-address">${esc(p.address)}</div></div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-          <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
+          <div style="display:flex;gap:6px;">
+            <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
+            <span class="badge-dealtype">${paymentCycleLabel(p.paymentCycle)}</span>
+          </div>
           <span class="badge-dealtype">${dealTypeLabel(p.dealType)}</span>
         </div>
       </div>
@@ -1127,6 +1147,7 @@ function renderDetail(){
     <div class="info-box"><h3>基本資訊</h3>
       <div class="info-row"><span class="info-key">📍 地址</span><span class="info-val">${esc(p.address)}</span></div>
       <div class="info-row"><span class="info-key">📁 經營類型</span><span class="info-val">${dealTypeLabel(p.dealType)}</span></div>
+      <div class="info-row"><span class="info-key">🔁 繳費方式</span><span class="info-val">${paymentCycleLabel(p.paymentCycle)}</span></div>
       <div class="info-row"><span class="info-key">👤 承租人</span><span class="info-val">${esc(p.tenant)||'—'}</span></div>
       <div class="info-row"><span class="info-key">📅 簽約日期</span><span class="info-val">${p.signDate}</span></div>
       <div class="info-row"><span class="info-key">⏱️ 租期</span><span class="info-val">${p.periodStart}-${p.periodEnd}</span></div>
@@ -1414,7 +1435,7 @@ function openPropertyModal(id){
     <div class="form-group"><label class="form-label">承租人</label><input class="form-input" id="pf-tenant" placeholder="姓名" value="${esc(p?p.tenant:'')}"></div>
     <div class="form-section">簽約資訊</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">簽約日期</label><input class="form-input" id="pf-signdate" placeholder="115/06/09" value="${esc(p?p.signDate:'')}"></div>
+      <div class="form-group"><label class="form-label">簽約日期</label><input class="form-input" type="date" id="pf-signdate" value="${p?rocToISO(p.signDate):''}"></div>
       <div class="form-group"><label class="form-label">狀態</label>
         <select class="form-input" id="pf-status" onchange="toggleVacantField()">
           <option value="new" ${p&&p.status==='new'?'selected':''}>新簽約</option>
@@ -1425,10 +1446,17 @@ function openPropertyModal(id){
       </div>
     </div>
     <div class="form-row" id="pf-period-row">
-      <div class="form-group"><label class="form-label">租期開始</label><input class="form-input" id="pf-start" placeholder="115/06/10" value="${esc(p?p.periodStart:'')}"></div>
-      <div class="form-group"><label class="form-label">租期結束</label><input class="form-input" id="pf-end" placeholder="116/06/09" value="${esc(p?p.periodEnd:'')}"></div>
+      <div class="form-group"><label class="form-label">租期開始</label><input class="form-input" type="date" id="pf-start" value="${p?rocToISO(p.periodStart):''}"></div>
+      <div class="form-group"><label class="form-label">租期結束</label><input class="form-input" type="date" id="pf-end" value="${p?rocToISO(p.periodEnd):''}"></div>
     </div>
-    <div class="form-group"><label class="form-label">收訂日期</label><input class="form-input" id="pf-depositdate" placeholder="115/06/01" value="${esc(p?p.depositDate:'')}"></div>
+    <div class="form-group"><label class="form-label">收訂日期</label><input class="form-input" type="date" id="pf-depositdate" value="${p?rocToISO(p.depositDate):''}"></div>
+    <div class="form-group"><label class="form-label">繳費方式</label>
+      <select class="form-input" id="pf-paymentcycle">
+        <option value="monthly" ${(!p||p.paymentCycle==='monthly')?'selected':''}>月繳</option>
+        <option value="quarterly" ${p&&p.paymentCycle==='quarterly'?'selected':''}>季繳</option>
+        <option value="annual" ${p&&p.paymentCycle==='annual'?'selected':''}>年繳</option>
+      </select>
+    </div>
     <div class="form-group" id="pf-vacant-row" style="display:${p&&p.status==='vacant'?'block':'none'}">
       <label class="form-label">閒置起始日期</label>
       <input class="form-input" type="date" id="pf-vacantsince" value="${p&&p.vacantSince?p.vacantSince:''}">
@@ -1615,7 +1643,7 @@ function saveModal(){
     if(!name){ alert('請輸入物件名稱'); return; }
     const data = {
       name, address: v('pf-address'), tenant: v('pf-tenant'), dealType: v('pf-dealtype'),
-      status: v('pf-status'), signDate: v('pf-signdate'), periodStart: v('pf-start'), periodEnd: v('pf-end'), depositDate: v('pf-depositdate'),
+      status: v('pf-status'), signDate: isoToRoc(v('pf-signdate')), periodStart: isoToRoc(v('pf-start')), periodEnd: isoToRoc(v('pf-end')), depositDate: isoToRoc(v('pf-depositdate')), paymentCycle: v('pf-paymentcycle'),
       rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
       bank: v('pf-bank') || '永豐銀行', account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
       vacantSince: v('pf-status')==='vacant' ? (v('pf-vacantsince')||null) : null
