@@ -18,6 +18,7 @@
     --gold: #B8863B;
     --gold-light: #FAF3E5;
     --accent: #1D7A9C;
+    --accent-light: #E6F1F5;
     --success: #2E7D5B;
     --success-light: #EAF5EF;
     --warning: #B4791E;
@@ -124,7 +125,7 @@
 
   .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .section-title span { font-size: 12px; color: var(--text3); font-weight: 400; }
-  .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; align-items: start; }
   .properties-grid.compact-view { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .view-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; }
   .view-toggle-btn {
@@ -156,7 +157,8 @@
   .badge-new { background: #FEE2E2; color: var(--danger); }
   .badge-expire { background: #FEE2E2; color: var(--danger); }
   .badge-vacant { background: #F3E8FF; color: #7E22CE; }
-  .badge-dealtype { background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; border: 1px solid var(--border); }
+  .badge-dealtype { background: var(--gold-light); color: var(--gold); font-size: 13px; font-weight: 700; padding: 4px 11px; border-radius: 20px; white-space: nowrap; }
+  .badge-cycle { background: var(--accent-light); color: var(--accent); font-size: 13px; font-weight: 700; padding: 4px 11px; border-radius: 20px; white-space: nowrap; }
   .idle-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2); }
   .idle-item:last-child { border-bottom: none; padding-bottom: 0; }
   .idle-days { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
@@ -727,7 +729,7 @@ function propCardHTML(p){
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <div style="display:flex;gap:6px;">
             <span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span>
-            <span class="badge-dealtype">${paymentCycleLabel(p.paymentCycle)}</span>
+            <span class="badge-cycle">${paymentCycleLabel(p.paymentCycle)}</span>
           </div>
           <span class="badge-dealtype">${dealTypeLabel(p.dealType)}</span>
         </div>
@@ -1462,7 +1464,7 @@ function openPropertyModal(id){
       <input class="form-input" type="date" id="pf-vacantsince" value="${p&&p.vacantSince?p.vacantSince:''}">
     </div>
     <div class="form-section">租金設定</div>
-    <div style="font-size:11px;color:var(--text3);margin:-6px 0 12px;">💡 輸入月租金後，押金與半個月服務費會自動帶入建議值（押金＝租金×2，服務費＝租金÷2），仍可手動修改覆蓋。</div>
+    <div style="font-size:11px;color:var(--text3);margin:-6px 0 12px;">💡 輸入月租金後，押金會自動帶入建議值（押金＝租金×2），仍可手動修改覆蓋；半個月服務費請自行輸入。</div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">月租金</label><input class="form-input" type="number" id="pf-rent" placeholder="0" value="${p?p.rent:''}" oninput="autoFillRentDerived()"></div>
       <div class="form-group"><label class="form-label">押金</label><input class="form-input" type="number" id="pf-deposit" placeholder="0" value="${p&&p.deposit?p.deposit:''}"></div>
@@ -1487,12 +1489,10 @@ function toggleVacantField(){
 function autoFillRentDerived(){
   const rentEl = document.getElementById('pf-rent');
   const depositEl = document.getElementById('pf-deposit');
-  const feeEl = document.getElementById('pf-servicefee');
-  if(!rentEl || !depositEl || !feeEl) return;
+  if(!rentEl || !depositEl) return;
   const rent = Number(rentEl.value);
   if(!rent){ return; }
   depositEl.value = rent * 2;
-  feeEl.value = rent / 2;
 }
 function deletePropertyFromModal(id){
   closeModal();
