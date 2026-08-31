@@ -1444,7 +1444,7 @@ function openPropertyModal(id){
     </div>
     <div class="form-section">銀行資訊</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">銀行名稱</label><input class="form-input" id="pf-bank" placeholder="永豐銀行(807)" value="${esc(p?p.bank:'')}"></div>
+      <div class="form-group"><label class="form-label">匯入銀行</label><input class="form-input" id="pf-bank" placeholder="永豐銀行" value="${esc(p?p.bank:'永豐銀行')}"></div>
       <div class="form-group"><label class="form-label">銀行戶名</label><input class="form-input" id="pf-accountholder" placeholder="悅管家管理顧問股份有限公司" value="${esc(p?p.accountHolder:'悅管家管理顧問股份有限公司')}"></div>
     </div>
     <div class="form-group"><label class="form-label">帳號</label><input class="form-input" id="pf-account" placeholder="XXX-XXX-XXXXXXX-X" value="${esc(p?p.account:'')}"></div>
