@@ -658,8 +658,33 @@ function fmtStatus(s){
 function priorityClass(p){ return { '緊急':'priority-high', '一般':'priority-mid', '低':'priority-low' }[p] || 'priority-mid'; }
 function getProp(id){ return properties.find(p => p.id === id); }
 function yearTotal(p){
+  const rent = p.rent || 0;
+  const deposit = p.deposit || 0;
   const sf = p.serviceFee || 0;
-  return p.rent * 12 + sf;
+  if(p.paymentCycle === 'annual'){
+    return (rent * 12) + (deposit * 2) + sf;
+  }
+  return rent + deposit + sf;
+}
+function yearTotalBreakdownHTML(p){
+  const rent = p.rent || 0;
+  const deposit = p.deposit || 0;
+  const sf = p.serviceFee || 0;
+  const isAnnual = p.paymentCycle === 'annual';
+  const rentLine = isAnnual
+    ? `<div>• 年繳租金（12個月）：${rent.toLocaleString()} × 12 = $${(rent*12).toLocaleString()}</div>`
+    : `<div>• 月租金：$${rent.toLocaleString()}</div>`;
+  const depositLine = isAnnual
+    ? `<div>• 押金（雙倍）：${deposit.toLocaleString()} × 2 = $${(deposit*2).toLocaleString()}</div>`
+    : `<div>• 押金：$${deposit.toLocaleString()}</div>`;
+  const feeLine = `<div>• 半個月服務費：$${sf.toLocaleString()}</div>`;
+  const paidLine = p.depositPaid ? `<div style="color:var(--text3)">• 已付訂金：$${p.depositPaid.toLocaleString()}（僅供參考，不列入總計）</div>` : '';
+  return `${rentLine}${depositLine}${feeLine}${paidLine}<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;font-weight:700;color:var(--text)">• 總收合計：$${yearTotal(p).toLocaleString()} 元整</div>`;
+}
+function toggleBreakdown(id){
+  const el = document.getElementById('year-breakdown-'+id);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 function esc(s){ return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function rocToISO(rocStr){
@@ -1160,6 +1185,10 @@ function renderDetail(){
       <div class="info-row"><span class="info-key">🔒 押金</span><span class="info-val">${fmtMoney(p.deposit)||'待填'}</span></div>
       <div class="info-row"><span class="info-key">🧾 半個月服務費</span><span class="info-val">${fmtMoney(p.serviceFee)||'待填'}</span></div>
       <div class="info-row"><span class="info-key">📊 公司案件獲利總入帳</span><span class="info-val">$${yearTotal(p).toLocaleString()}</span></div>
+      <div style="text-align:right;margin-top:-2px;"><a href="javascript:void(0)" onclick="toggleBreakdown(${p.id})" style="font-size:11px;color:var(--accent);text-decoration:underline;">查看計算明細</a></div>
+      <div id="year-breakdown-${p.id}" style="display:none;background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--text2);line-height:1.9;">
+        ${yearTotalBreakdownHTML(p)}
+      </div>
     </div>
     <div class="info-box"><h3>銀行資訊</h3>
       <div class="info-row"><span class="info-key">🏦 匯入銀行</span><span class="info-val">${esc(p.bank)||'永豐銀行'}</span></div>
@@ -1471,6 +1500,7 @@ function openPropertyModal(id){
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">半個月服務費</label><input class="form-input" type="number" id="pf-servicefee" placeholder="0" value="${p&&p.serviceFee?p.serviceFee:''}"></div>
+      <div class="form-group"><label class="form-label">已付訂金</label><input class="form-input" type="number" id="pf-depositpaid" placeholder="0（僅供顯示，不列入總計）" value="${p&&p.depositPaid?p.depositPaid:''}"></div>
     </div>
     <div class="form-section">銀行資訊</div>
     <div class="form-row">
@@ -1644,7 +1674,7 @@ function saveModal(){
     const data = {
       name, address: v('pf-address'), tenant: v('pf-tenant'), dealType: v('pf-dealtype'),
       status: v('pf-status'), signDate: isoToRoc(v('pf-signdate')), periodStart: isoToRoc(v('pf-start')), periodEnd: isoToRoc(v('pf-end')), depositDate: isoToRoc(v('pf-depositdate')), paymentCycle: v('pf-paymentcycle'),
-      rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null,
+      rent: Number(v('pf-rent'))||0, deposit: v('pf-deposit')?Number(v('pf-deposit')):null, serviceFee: v('pf-servicefee')?Number(v('pf-servicefee')):null, depositPaid: v('pf-depositpaid')?Number(v('pf-depositpaid')):null,
       bank: v('pf-bank') || '永豐銀行', account: v('pf-account'), accountHolder: v('pf-accountholder'), note: v('pf-note'),
       vacantSince: v('pf-status')==='vacant' ? (v('pf-vacantsince')||null) : null
     };
