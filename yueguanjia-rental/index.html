@@ -657,27 +657,27 @@ function fmtStatus(s){
 }
 function priorityClass(p){ return { '緊急':'priority-high', '一般':'priority-mid', '低':'priority-low' }[p] || 'priority-mid'; }
 function getProp(id){ return properties.find(p => p.id === id); }
+function cycleMonths(pc){ return { monthly:1, quarterly:3, annual:12 }[pc] || 1; }
 function yearTotal(p){
   const rent = p.rent || 0;
+  const months = cycleMonths(p.paymentCycle);
   const deposit = p.deposit || 0;
   const sf = p.serviceFee || 0;
-  if(p.paymentCycle === 'annual'){
-    return (rent * 12) + (deposit * 2) + sf;
-  }
-  return rent + deposit + sf;
+  return (rent * months) + deposit + sf;
 }
 function yearTotalBreakdownHTML(p){
   const rent = p.rent || 0;
+  const months = cycleMonths(p.paymentCycle);
+  const cycleLabel = paymentCycleLabel(p.paymentCycle);
+  const cycleAmount = rent * months;
   const deposit = p.deposit || 0;
   const sf = p.serviceFee || 0;
-  const isAnnual = p.paymentCycle === 'annual';
-  const rentLine = isAnnual
-    ? `<div>• 年繳租金（12個月）：${rent.toLocaleString()} × 12 = $${(rent*12).toLocaleString()}</div>`
+
+  const rentLine = months > 1
+    ? `<div>• ${cycleLabel}（${months}個月）：${rent.toLocaleString()} × ${months} = $${cycleAmount.toLocaleString()}</div>`
     : `<div>• 月租金：$${rent.toLocaleString()}</div>`;
-  const depositLine = isAnnual
-    ? `<div>• 押金（雙倍）：${deposit.toLocaleString()} × 2 = $${(deposit*2).toLocaleString()}</div>`
-    : `<div>• 押金：$${deposit.toLocaleString()}</div>`;
-  const feeLine = `<div>• 半個月服務費：$${sf.toLocaleString()}</div>`;
+  const depositLine = `<div>• 押金（兩個月）：$${deposit.toLocaleString()}</div>`;
+  const feeLine = sf ? `<div>• 仲介服務費（半個月）：$${sf.toLocaleString()}</div>` : '';
   const paidLine = p.depositPaid ? `<div style="color:var(--text3)">• 已付訂金：$${p.depositPaid.toLocaleString()}（僅供參考，不列入總計）</div>` : '';
   return `${rentLine}${depositLine}${feeLine}${paidLine}<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;font-weight:700;color:var(--text)">• 總收合計：$${yearTotal(p).toLocaleString()} 元整</div>`;
 }
