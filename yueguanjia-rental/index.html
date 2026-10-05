@@ -126,7 +126,7 @@
   .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .section-title span { font-size: 12px; color: var(--text3); font-weight: 400; }
   .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; align-items: start; }
-  .properties-grid.compact-view { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .properties-grid.compact-view { display: block; }
   .view-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; }
   .view-toggle-btn {
     padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
@@ -134,13 +134,33 @@
   }
   .view-toggle-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
   .view-toggle-btn:hover:not(.active) { color: var(--text2); }
-  .prop-chip {
-    background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border);
-    box-shadow: var(--shadow); padding: 14px 16px; cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  /* 精簡列表：Excel 式表格 */
+  .prop-table-wrap {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow); overflow-x: auto; -webkit-overflow-scrolling: touch;
   }
-  .prop-chip:hover { box-shadow: var(--shadow-md); border-color: var(--primary); transform: translateY(-1px); }
-  .prop-chip-name { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); }
+  .prop-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  .prop-table th {
+    background: var(--surface2); border: 1px solid var(--border); padding: 9px 14px;
+    font-size: 12px; font-weight: 700; color: var(--text2); text-align: left; white-space: nowrap;
+    letter-spacing: 0.03em; text-transform: none;
+  }
+  .prop-table td {
+    background: var(--surface); border: 1px solid var(--border); padding: 9px 14px;
+    font-size: 13px; color: var(--text); white-space: nowrap; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .prop-table tbody tr:nth-child(even) td { background: #FBFAF7; }
+  .prop-table tbody tr:hover td { background: var(--primary-light); }
+  .prop-table th:first-child, .prop-table td:first-child {
+    position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border);
+  }
+  .prop-table th:first-child { z-index: 2; }
+  .prop-table .pt-name { font-family: var(--font-head); font-weight: 700; }
+  .prop-table .pt-rent { font-weight: 700; color: var(--danger); text-align: right; }
+  .prop-table th.pt-rent-h { text-align: right; }
+  .prop-table .badge { font-size: 12px; padding: 2px 10px; }
+  .prop-table-count { font-size: 12px; color: var(--text3); margin-top: 8px; }
   .prop-card {
     background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
     box-shadow: var(--shadow); overflow: hidden; transition: all 0.2s;
@@ -782,8 +802,23 @@ function propCardHTML(p){
     </div>`;
 }
 let propViewMode = 'grid';
-function propChipHTML(p){
-  return `<div class="prop-chip" onclick="openDetail(${p.id})"><span class="prop-chip-name">${esc(p.name)}</span></div>`;
+function propTableHTML(list){
+  const rows = list.map(p => {
+    const period = (p.periodStart || p.periodEnd) ? `${p.periodStart||''}-${p.periodEnd||''}` : '—';
+    return `<tr onclick="openDetail(${p.id})">
+      <td class="pt-name">${esc(p.name)}</td>
+      <td>${esc(p.tenant)||'—'}</td>
+      <td>${period}</td>
+      <td class="pt-rent">$${(p.rent||0).toLocaleString()}</td>
+      <td>${paymentCycleLabel(p.paymentCycle)}</td>
+      <td>${dealTypeLabel(p.dealType)}</td>
+      <td><span class="badge ${statusClass(p.status)}">${statusLabel(p.status)}</span></td>
+    </tr>`;
+  }).join('');
+  return `<div class="prop-table-wrap"><table class="prop-table">
+    <thead><tr><th>物件</th><th>承租人</th><th>租期</th><th class="pt-rent-h">月租金</th><th>繳費</th><th>類型</th><th>狀態</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="prop-table-count">共 ${list.length} 筆</div>`;
 }
 function setPropViewMode(mode){
   propViewMode = mode;
@@ -801,8 +836,7 @@ function renderAllCards(){
   ) : properties;
   const gridEl = document.getElementById('prop-grid-2');
   gridEl.classList.toggle('compact-view', propViewMode === 'compact');
-  const renderFn = propViewMode === 'compact' ? propChipHTML : propCardHTML;
-  const html = filtered.length ? filtered.map(renderFn).join('') :
+  const html = filtered.length ? (propViewMode === 'compact' ? propTableHTML(filtered) : filtered.map(propCardHTML).join('')) :
     (properties.length
       ? `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-text">找不到符合「${esc(kw)}」的物件</div></div>`
       : `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-text">還沒有房屋資訊<br>點擊「新增房屋」按鈕開始建立</div></div>`);
