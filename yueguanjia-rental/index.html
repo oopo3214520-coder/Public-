@@ -663,6 +663,10 @@ function yearTotal(p){
   const months = cycleMonths(p.paymentCycle);
   const deposit = p.deposit || 0;
   const sf = p.serviceFee || 0;
+  // 代管：押金不計入總計；包租：押金計入
+  if(p.dealType === 'management'){
+    return (rent * months) + sf;
+  }
   return (rent * months) + deposit + sf;
 }
 function yearTotalBreakdownHTML(p){
@@ -676,7 +680,10 @@ function yearTotalBreakdownHTML(p){
   const rentLine = months > 1
     ? `<div>• ${cycleLabel}（${months}個月）：${rent.toLocaleString()} × ${months} = $${cycleAmount.toLocaleString()}</div>`
     : `<div>• 月租金：$${rent.toLocaleString()}</div>`;
-  const depositLine = `<div>• 押金（兩個月）：$${deposit.toLocaleString()}</div>`;
+  const isMgmt = p.dealType === 'management';
+  const depositLine = isMgmt
+    ? `<div style="color:var(--text3)">• 押金（兩個月）：$${deposit.toLocaleString()}（代管不列入總計）</div>`
+    : `<div>• 押金（兩個月）：$${deposit.toLocaleString()}</div>`;
   const feeLine = sf ? `<div>• 仲介服務費（半個月）：$${sf.toLocaleString()}</div>` : '';
   const paidLine = p.depositPaid ? `<div style="color:var(--text3)">• 已付訂金：$${p.depositPaid.toLocaleString()}（僅供參考，不列入總計）</div>` : '';
   return `${rentLine}${depositLine}${feeLine}${paidLine}<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;font-weight:700;color:var(--text)">• 總收合計：$${yearTotal(p).toLocaleString()} 元整</div>`;
