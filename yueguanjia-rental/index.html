@@ -79,6 +79,19 @@
 
   /* ── Main ── */
   .main { margin-left: 224px; padding: 28px; min-height: 100vh; }
+  .cloud-banner {
+    position: sticky; top: 0; z-index: 90; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    background: var(--danger); color: #fff; padding: 11px 16px; border-radius: var(--radius-sm); margin-bottom: 16px;
+    font-size: 13px; font-weight: 600; box-shadow: var(--shadow-md);
+  }
+  .cloud-banner .btn { background: #fff; color: var(--danger); padding: 6px 14px; font-size: 12px; white-space: nowrap; }
+  .toast {
+    position: fixed; right: 24px; bottom: 24px; background: var(--primary); color: #fff; padding: 10px 18px;
+    border-radius: var(--radius-sm); font-size: 13px; box-shadow: var(--shadow-md); z-index: 2000;
+    opacity: 0; transform: translateY(8px); transition: all 0.2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: none; }
+  @media (max-width: 640px) { .toast { left: 12px; right: 12px; bottom: 76px; text-align: center; } }
   .page { display: none; }
   .page.active { display: block; }
 
@@ -411,10 +424,11 @@
     <div class="nav-item" onclick="showPage('todo')"><span class="nav-icon">✅</span><span>待辦任務</span></div>
     <div class="nav-item" onclick="showPage('report')"><span class="nav-icon">📊</span><span>月報表</span></div>
   </nav>
-  <div class="sidebar-footer">民國115年<br><span id="sync-status" style="font-size:11px">● 連線中…</span></div>
+  <div class="sidebar-footer">民國115年<br><span id="sync-status" style="font-size:11px">● 連線中…</span><br><a href="javascript:void(0)" onclick="openBackupModal()" style="font-size:11px;color:rgba(255,255,255,0.65);text-decoration:underline;">🗂️ 資料備份</a></div>
 </aside>
 
 <main class="main">
+  <div id="cloud-banner" class="cloud-banner" style="display:none"></div>
 
   <!-- HOME -->
   <div class="page active" id="page-home">
@@ -596,58 +610,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ═══════════════════════════════ DATA ═══════════════════════════════
-let properties = [
-  {
-    id: 1, name: '崇善15街 501室', address: '台南市東區崇善15街45號501室',
-    tenant: '陳子予', status: 'renew',
-    signDate: '115/06/09', periodStart: '115/06/10', periodEnd: '116/06/09', depositDate: '115/06/01',
-    rent: 10000, deposit: 20000, serviceFee: 5000,
-    bank: '永豐銀行(807)', account: '017-018-0016068-8', accountHolder: '悅管家管理顧問股份有限公司', note: '',
-    rentRecords: [
-      { month: '115/07', rent: 10000, serviceFee: 5000, status: 'paid', note: '' },
-      { month: '115/06', rent: 10000, serviceFee: 5000, status: 'paid', note: '首月' },
-    ],
-    repairRecords: [
-      { item: '冷氣清洗保養', reported: '115/06/25', done: '115/07/01', cost: 1200, status: 'done' },
-      { item: '燈具更換', reported: '115/04/15', done: '115/04/16', cost: 350, status: 'done' },
-    ],
-    todos: []
-  },
-  {
-    id: 2, name: '崇善15街 402室', address: '台南市東區崇善15街45號402室',
-    tenant: '曾韋綺', status: 'new',
-    signDate: '115/06/15', periodStart: '115/06/16', periodEnd: '116/06/15', depositDate: '115/06/10',
-    rent: 12500, deposit: 25000, serviceFee: null,
-    bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
-    rentRecords: [
-      { month: '115/07', rent: 12500, serviceFee: null, status: 'pending', note: '待確認' },
-      { month: '115/06', rent: 12500, serviceFee: null, status: 'paid', note: '首月' },
-    ],
-    repairRecords: [ { item: '門鎖故障維修', reported: '115/07/18', done: '', cost: null, status: 'progress' } ],
-    todos: [
-      { text: '補齊半個月服務費資料', done: false, priority: '緊急' },
-      { text: '補齊銀行收款帳號', done: false, priority: '緊急' },
-      { text: '門鎖維修跟進', done: false, priority: '一般' },
-    ]
-  },
-  {
-    id: 3, name: '小東路 202室', address: '台南市東區小東路202室',
-    tenant: '楊筱琦', status: 'renew',
-    signDate: '115/06/05', periodStart: '115/07/21', periodEnd: '116/07/20', depositDate: '115/06/28',
-    rent: 5950, deposit: 11900, serviceFee: null,
-    bank: '', account: '', accountHolder: '悅管家管理顧問股份有限公司', note: '',
-    rentRecords: [
-      { month: '115/07', rent: 5950, serviceFee: null, status: 'paid', note: '' },
-      { month: '115/06', rent: 5950, serviceFee: null, status: 'paid', note: '首月' },
-    ],
-    repairRecords: [ { item: '廁所排水管疏通', reported: '115/05/10', done: '115/05/12', cost: 800, status: 'done' } ],
-    todos: [
-      { text: '確認年度合計資料設定', done: false, priority: '緊急' },
-      { text: '補齊半個月服務費資料', done: false, priority: '一般' },
-    ]
-  }
-];
-let nextPropId = 4;
+let properties = [];
+let nextPropId = 1;
 let currentPropId = null;
 let prevPage = 'home';
 let modalCtx = { type: null, propId: null, editIndex: null };
@@ -1159,18 +1123,21 @@ function switchReportMonth(id){
 
 // ═══════════════════════════════ MONTHLY REPORT: DELETE ACTIONS ═══════════════════════════════
 function deleteReportMonth(id){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這個月份的報表嗎？此操作無法復原。')) return;
   monthlyReports = monthlyReports.filter(r=>r.id!==id);
   if(currentReportId === id) currentReportId = null;
   refreshAll();
 }
 function deleteStaff(reportId, staffId){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這位員工的本月資料嗎？')) return;
   const report = getReport(reportId);
   report.staff = report.staff.filter(s=>s.id!==staffId);
   refreshAll();
 }
 function deleteReportItem(reportId, staffId, itemId){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這筆項目嗎？')) return;
   const staff = getStaff(getReport(reportId), staffId);
   staff.items = staff.items.filter(i=>i.id!==itemId);
@@ -1286,12 +1253,14 @@ function switchTab(name){
 
 // ═══════════════════════════════ TODO ACTIONS ═══════════════════════════════
 function toggleTodoGlobal(propId, idx){
+  if(!requireCloud()) return;
   const p = getProp(propId);
   if(!p) return;
   p.todos[idx].done = !p.todos[idx].done;
   refreshAll();
 }
 function deleteTodo(propId, idx){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這項待辦任務嗎？')) return;
   const p = getProp(propId);
   p.todos.splice(idx,1);
@@ -1300,12 +1269,14 @@ function deleteTodo(propId, idx){
 
 // ═══════════════════════════════ RENT / REPAIR DELETE ═══════════════════════════════
 function deleteRentRecord(propId, idx){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這筆收租紀錄嗎？')) return;
   const p = getProp(propId);
   p.rentRecords.splice(idx,1);
   refreshAll();
 }
 function deleteRepairRecord(propId, idx){
+  if(!requireCloud()) return;
   if(!confirm('確定要刪除這筆維修紀錄嗎？')) return;
   const p = getProp(propId);
   p.repairRecords.splice(idx,1);
@@ -1314,6 +1285,7 @@ function deleteRepairRecord(propId, idx){
 
 // ═══════════════════════════════ PROPERTY DELETE ═══════════════════════════════
 function deleteProperty(id){
+  if(!requireCloud()) return;
   const p = getProp(id);
   if(!p) return;
   if(!confirm(`確定要刪除「${p.name}」嗎？此操作將移除所有相關的收租、維修與待辦紀錄，無法復原。`)) return;
@@ -1326,24 +1298,38 @@ function deleteProperty(id){
 }
 
 // ═══════════════════════════════ REFRESH ALL ═══════════════════════════════
-function refreshAll(){
+function renderAllViews(){
   renderStats();
   renderAllCards();
   renderVacant();
   renderAlerts();
   renderRecent();
-  const activePage = document.querySelector('.page.active').id.replace('page-','');
+  let activePage = document.querySelector('.page.active').id.replace('page-','');
+  if(activePage==='detail' && (!currentPropId || !getProp(currentPropId))){
+    currentPropId = null;
+    showPage('properties');
+    activePage = 'properties';
+  }
   if(activePage==='rent') renderRentPage();
   if(activePage==='repair') renderRepairPage();
   if(activePage==='todo') renderTodoPage();
-  if(activePage==='detail' && currentPropId) renderDetail();
+  if(activePage==='detail') renderDetail();
   if(activePage==='report') renderReportPage();
   if(activePage==='home') renderIncomeChart();
+}
+function refreshAll(){
+  renderAllViews();
   persistData();
 }
 
 // ═══════════════════════════════ CLOUD SYNC (Upstash via /api/data) ═══════════════════════════════
 let saveTimer = null;
+let saveScheduled = false;
+let saving = false;
+let resaveQueued = false;
+let cloudReady = false;   // 只有「成功讀到雲端資料」之後才允許寫回，避免用空白／舊資料蓋掉雲端
+let dataVersion = 0;      // 這個畫面所依據的雲端版本號；存檔時一併送出，雲端用來偵測「畫面已過期」
+
 function setSyncStatus(text, isError){
   const el = document.getElementById('sync-status');
   if(!el) return;
@@ -1356,65 +1342,137 @@ function setSyncStatus(text, isError){
     el.style.color = 'rgba(255,255,255,0.5)';
   }
 }
+let toastTimer = null;
+function showToast(msg){
+  let el = document.getElementById('toast');
+  if(!el){ el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
+}
+function showCloudBanner(msg, actionLabel, actionCall){
+  const el = document.getElementById('cloud-banner');
+  if(!el) return;
+  if(!msg){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = '<span>' + esc(msg) + '</span>' + (actionLabel ? '<button class="btn btn-sm" onclick="' + actionCall + '">' + esc(actionLabel) + '</button>' : '');
+  el.style.display = 'flex';
+}
+function requireCloud(){
+  if(cloudReady) return true;
+  alert('目前無法儲存：尚未成功連線雲端，或這個畫面的資料已經過期。\n請先按畫面上方的「重新載入」，再重新操作一次。');
+  return false;
+}
+function currentStatePayload(){
+  return { properties: properties, nextPropId: nextPropId, monthlyReports: monthlyReports, nextReportId: nextReportId, nextStaffId: nextStaffId, nextItemId: nextItemId };
+}
+function applyState(data){
+  properties = Array.isArray(data.properties) ? data.properties : [];
+  const maxPropId = properties.length ? Math.max.apply(null, properties.map(function(p){ return p.id; })) : 0;
+  nextPropId = Math.max(data.nextPropId || 1, maxPropId + 1);
+  monthlyReports = Array.isArray(data.monthlyReports) ? data.monthlyReports : [];
+  const maxRepId = monthlyReports.length ? Math.max.apply(null, monthlyReports.map(function(r){ return r.id; })) : 0;
+  nextReportId = Math.max(data.nextReportId || 1, maxRepId + 1);
+  nextStaffId = data.nextStaffId || 1;
+  nextItemId = data.nextItemId || 1;
+}
 function persistData(){
+  if(!cloudReady) return;
+  saveScheduled = true;
   clearTimeout(saveTimer);
   setSyncStatus('● 儲存中…');
-  saveTimer = setTimeout(async () => {
-    try{
-      const resp = await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties, nextPropId, monthlyReports, nextReportId, nextStaffId, nextItemId })
-      });
-      if(!resp.ok){
-        const err = await resp.json().catch(()=>({}));
-        throw new Error(err.error || ('HTTP ' + resp.status));
-      }
-      setSyncStatus('● 已同步雲端');
-    }catch(e){
-      console.error('儲存失敗', e);
-      setSyncStatus('⚠ 儲存失敗（請檢查網路或設定）', true);
+  saveTimer = setTimeout(doSave, 500);
+}
+async function doSave(){
+  saveScheduled = false;
+  if(!cloudReady) return;
+  if(saving){ resaveQueued = true; return; }
+  saving = true;
+  try{
+    const resp = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, currentStatePayload(), { baseVersion: dataVersion }))
+    });
+    if(resp.status === 409){
+      cloudReady = false;
+      resaveQueued = false;
+      setSyncStatus('⚠ 資料已被其他人更新，未儲存', true);
+      showCloudBanner('資料已被其他人（或另一個視窗）更新，你剛剛的修改「沒有」儲存。請重新載入最新資料後，再重新操作一次。', '重新載入', 'reloadFromCloud()');
+      return;
     }
-  }, 500);
+    if(!resp.ok){
+      const err = await resp.json().catch(function(){ return {}; });
+      throw new Error(err.error || ('HTTP ' + resp.status));
+    }
+    const json = await resp.json().catch(function(){ return {}; });
+    if(typeof json.version === 'number') dataVersion = json.version;
+    setSyncStatus('● 已同步雲端');
+    showCloudBanner('');
+  }catch(e){
+    console.error('儲存失敗', e);
+    setSyncStatus('⚠ 儲存失敗（請檢查網路或設定）', true);
+    showCloudBanner('儲存失敗，你剛剛的修改可能還沒有存到雲端。請檢查網路後按「重試」。', '重試', 'persistData()');
+  }finally{
+    saving = false;
+    if(resaveQueued){ resaveQueued = false; doSave(); }
+  }
 }
 async function loadData(){
   const loadingEl = document.getElementById('loading-overlay');
+  let ok = false;
   try{
     setSyncStatus('● 讀取雲端資料中…');
-    const resp = await fetch('/api/data');
+    const resp = await fetch('/api/data', { cache: 'no-store' });
     if(!resp.ok){
-      const err = await resp.json().catch(()=>({}));
+      const err = await resp.json().catch(function(){ return {}; });
       throw new Error(err.error || ('HTTP ' + resp.status));
     }
     const data = await resp.json();
-    if(data && Array.isArray(data.properties) && data.properties.length){
-      properties = data.properties;
-      nextPropId = data.nextPropId || (Math.max(...properties.map(p=>p.id)) + 1);
-      monthlyReports = Array.isArray(data.monthlyReports) ? data.monthlyReports : [];
-      nextReportId = data.nextReportId || (monthlyReports.length ? Math.max(...monthlyReports.map(r=>r.id))+1 : 1);
-      nextStaffId = data.nextStaffId || 1;
-      nextItemId = data.nextItemId || 1;
-      setSyncStatus('● 已同步雲端');
+    if(data && Array.isArray(data.properties)){
+      applyState(data);
+      dataVersion = (typeof data._v === 'number') ? data._v : 0;
+    } else if(data === null){
+      applyState({ properties: [] });   // 雲端還沒有任何資料：從空白開始（不再塞範例資料）
+      dataVersion = 0;
     } else {
-      // Redis 裡還沒有資料 → 用預設範例資料當作第一次的初始值，並寫回雲端
-      setSyncStatus('● 初始化雲端資料…');
-      persistData();
+      throw new Error('雲端資料格式異常');
     }
+    cloudReady = true;
+    ok = true;
+    showCloudBanner('');
+    setSyncStatus('● 已同步雲端');
   }catch(e){
-    console.error('載入失敗，改用預設資料顯示', e);
-    setSyncStatus('⚠ 無法連線雲端，暫時顯示本機資料（重新整理可能會消失）', true);
+    console.error('載入失敗', e);
+    cloudReady = false;
+    setSyncStatus('⚠ 無法連線雲端，目前無法儲存', true);
+    showCloudBanner('無法連線雲端，目前無法儲存任何修改（畫面上的資料可能不是最新的）。請檢查網路後重新載入。', '重新載入', 'reloadFromCloud()');
   }
-  const generated = autoGenerateMonthlyRentRecords();
+  const generated = ok ? autoGenerateMonthlyRentRecords() : false;
   if(loadingEl) loadingEl.style.display = 'none';
-  renderStats(); renderAllCards(); renderVacant(); renderAlerts(); renderRecent();
-  const activePage = document.querySelector('.page.active').id.replace('page-','');
-  if(activePage==='rent') renderRentPage();
-  if(activePage==='repair') renderRepairPage();
-  if(activePage==='todo') renderTodoPage();
-  if(activePage==='detail' && currentPropId) renderDetail();
-  if(activePage==='report') renderReportPage();
-  if(activePage==='home') renderIncomeChart();
+  renderAllViews();
   if(generated) persistData();
+}
+async function reloadFromCloud(){
+  showCloudBanner('');
+  await loadData();
+}
+// 背景檢查雲端是否有更新（別人改了資料）；自己有未存檔的修改、或正在編輯時一律不動
+async function softRefresh(){
+  if(!cloudReady || saving || saveScheduled || resaveQueued) return;
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('open')) return;
+  try{
+    const resp = await fetch('/api/data', { cache: 'no-store' });
+    if(!resp.ok) return;
+    const data = await resp.json();
+    if(!data || typeof data._v !== 'number' || data._v <= dataVersion) return;
+    if(saving || saveScheduled || resaveQueued) return;
+    applyState(data);
+    dataVersion = data._v;
+    renderAllViews();
+    showToast('已同步最新資料');
+  }catch(e){ /* 背景檢查失敗就算了，不打擾使用者 */ }
 }
 
 // ═══════════════════════════════ 4. 收租紀錄自動產生（每月自動補上待收款空白紀錄） ═══════════════════════════════
@@ -1430,6 +1488,124 @@ function autoGenerateMonthlyRentRecords(){
     }
   });
   return added;
+}
+
+// ═══════════════════════════════ 資料備份、還原與異動紀錄 ═══════════════════════════════
+function pad2(n){ return String(n).padStart(2,'0'); }
+function backupLabel(raw){
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})$/.exec(raw);
+  if(!m) return raw;
+  const h = Number(m[4]);
+  return m[1] + '/' + m[2] + '/' + m[3] + ' ' + pad2(h) + ':00～' + pad2(h+6) + ':00 時段';
+}
+function openBackupModal(){
+  document.getElementById('modal-save-btn').style.display = 'none';
+  document.getElementById('modal-cancel-btn').textContent = '關閉';
+  document.getElementById('modal-footer-left').innerHTML = '';
+  modalCtx = { type: 'backup' };
+  document.getElementById('modal-title').textContent = '🗂️ 資料備份與異動紀錄';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-section">手動備份（存到你的電腦）</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="downloadBackup('悅管家備份')">⬇️ 下載目前資料</button>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer">⬆️ 從備份檔還原<input type="file" accept=".json,application/json" style="display:none" onchange="restoreFromFile(this)"></label>
+    </div>
+    <div class="form-section">雲端自動備份</div>
+    <div id="backup-list" style="font-size:13px;color:var(--text3)">載入中…</div>
+    <div class="form-section">最近異動紀錄（新增／刪除）</div>
+    <div id="change-log" style="font-size:12px;color:var(--text3)">載入中…</div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+  loadBackupList();
+  loadChangeLog();
+}
+async function loadBackupList(){
+  const el = document.getElementById('backup-list');
+  if(!el) return;
+  try{
+    const resp = await fetch('/api/data?action=backups', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const list = await resp.json();
+    el.innerHTML = list.length
+      ? list.map(function(b){
+          return '<div class="idle-item"><div style="color:var(--text2)">' + esc(backupLabel(b.label)) + '</div>' +
+                 '<button class="btn btn-secondary btn-xs" data-key="' + esc(b.key) + '" onclick="restoreFromCloudBackup(this.dataset.key)">還原</button></div>';
+        }).join('') + '<div style="font-size:11px;margin-top:8px">每個時段保留「該時段第一次修改前」的資料，共保留 30 天。</div>'
+      : '目前還沒有自動備份（資料被修改後才會產生）。';
+  }catch(e){ el.textContent = '讀取備份清單失敗：' + e.message; }
+}
+function describeLog(x){
+  if(x.type === 'conflict') return '有一個過期的畫面想要存檔，已被系統擋下（避免蓋掉較新的資料）';
+  const parts = [];
+  if(x.added && x.added.length) parts.push('新增物件：' + x.added.join('、'));
+  if(x.removed && x.removed.length) parts.push('刪除物件：' + x.removed.join('、'));
+  if(x.removedRecords) parts.push('刪除了 ' + x.removedRecords + ' 筆收租／維修／待辦紀錄');
+  if(x.addedMonths && x.addedMonths.length) parts.push('新增月報表：' + x.addedMonths.join('、'));
+  if(x.removedMonths && x.removedMonths.length) parts.push('刪除月報表：' + x.removedMonths.join('、'));
+  return parts.join('；') || '資料異動';
+}
+async function loadChangeLog(){
+  const el = document.getElementById('change-log');
+  if(!el) return;
+  try{
+    const resp = await fetch('/api/data?action=log', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const list = await resp.json();
+    el.innerHTML = list.length
+      ? list.map(function(x){
+          const when = new Date(x.t).toLocaleString('zh-TW', { hour12: false });
+          return '<div style="padding:7px 0;border-bottom:1px solid var(--surface2)"><div style="color:var(--text4);font-size:11px">' + esc(when) + ' · ' + esc(x.device || '未知裝置') + '</div><div style="color:var(--text2)">' + esc(describeLog(x)) + '</div></div>';
+        }).join('')
+      : '目前還沒有異動紀錄（從這個版本開始記錄）。';
+  }catch(e){ el.textContent = '讀取異動紀錄失敗：' + e.message; }
+}
+function downloadBackup(prefix){
+  const now = new Date();
+  const ts = now.getFullYear() + pad2(now.getMonth()+1) + pad2(now.getDate()) + '-' + pad2(now.getHours()) + pad2(now.getMinutes());
+  const data = Object.assign({}, currentStatePayload(), { exportedAt: now.toISOString(), app: 'yueguanjia-rental' });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = prefix + '-' + ts + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+function applySnapshot(snap, desc){
+  if(!snap || !Array.isArray(snap.properties)){ alert('這份備份的格式不正確，無法還原。'); return; }
+  if(!requireCloud()) return;
+  const reports = Array.isArray(snap.monthlyReports) ? snap.monthlyReports.length : 0;
+  if(!confirm('確定要用「' + desc + '」取代目前所有資料嗎？\n\n這份備份有：物件 ' + snap.properties.length + ' 筆、月報表 ' + reports + ' 個月份。\n\n按「確定」後，會先自動下載一份「目前的資料」到你的電腦當作還原前備份。')) return;
+  downloadBackup('還原前備份');
+  applyState(snap);
+  currentReportId = null;
+  refreshAll();
+  closeModal();
+  showToast('已還原，正在同步雲端…');
+}
+async function restoreFromCloudBackup(key){
+  if(!requireCloud()) return;
+  try{
+    const resp = await fetch('/api/data?action=backup&key=' + encodeURIComponent(key), { cache: 'no-store' });
+    if(!resp.ok){
+      const err = await resp.json().catch(function(){ return {}; });
+      throw new Error(err.error || ('HTTP ' + resp.status));
+    }
+    const snap = await resp.json();
+    applySnapshot(snap, backupLabel(key.replace(/^yueguanjia:backup:/, '')));
+  }catch(e){ alert('讀取這份備份失敗：' + e.message); }
+}
+function restoreFromFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    let snap = null;
+    try{ snap = JSON.parse(reader.result); }catch(e){ alert('這個檔案不是有效的備份檔。'); input.value = ''; return; }
+    applySnapshot(snap, '檔案「' + file.name + '」');
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ═══════════════════════════════ MODAL: PROPERTY ═══════════════════════════════
@@ -1707,6 +1883,7 @@ function openReportItemModal(reportId, staffId, itemId){
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
 
 function saveModal(){
+  if(!requireCloud()) return;
   const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
   if(modalCtx.type === 'addProperty' || modalCtx.type === 'editProperty'){
@@ -1796,6 +1973,12 @@ function saveModal(){
 document.getElementById('modal-overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
 // ═══════════════════════════════ INIT ═══════════════════════════════
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') softRefresh(); });
+window.addEventListener('focus', softRefresh);
+setInterval(softRefresh, 120000);
+window.addEventListener('beforeunload', function(e){
+  if(saveScheduled || saving || resaveQueued){ e.preventDefault(); e.returnValue = ''; }
+});
 loadData();
 </script>
 </body>
